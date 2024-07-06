@@ -6,7 +6,7 @@
 }
 .post-preview {
   > a {
-    color: white;
+    color: rgb(89, 82, 82);
     &:focus,
     &:hover {
       text-decoration: none;
@@ -57,7 +57,7 @@
           margin: 0;
         }
         > .post-subtitle {
-          color: rgba(255,255,255,.6);
+          color: rgba(142, 134, 134, 0.6);
           font-weight: 300;
           margin: 10px 0 10px;
           line-height: 1.7;
