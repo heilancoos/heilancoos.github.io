@@ -7,7 +7,7 @@ url:               "https://github.com/perraas/"
 baseurl:
 # Social Profiles
 github_username:   perraas
-
+linkedin_username: alexis-o
 markdown:          kramdown
 paginate:          10
 paginate_path:     "/posts/page:num/"
