@@ -1,17 +1,12 @@
-title:             Square Zero
-email:             sssurajsuraj@gmail.com
-description:       Silent Observations
+title:             Helian Security
+email:             aobeng2023@gmail.com
+description:       ...in the pursuit of knowledge
 author:            J
 #url:               "localhost:4000"
-url:               "http://squarezero.github.io/"
+url:               "https://github.com/perraas/"
 baseurl:
 
-# Social Profiles
-#twitter_username:  SBootstrap
-#github_username:   BlackrockDigital
-#facebook_username: StartBootstrap
 
-# Build settings
 markdown:          kramdown
 paginate:          10
 paginate_path:     "/posts/page:num/"
