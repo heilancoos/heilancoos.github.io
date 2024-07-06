@@ -1,11 +1,12 @@
 title:             Helian Security
 email:             aobeng2023@gmail.com
 description:       ...in the pursuit of knowledge
-author:            J
+author:            HC
 #url:               "localhost:4000"
 url:               "https://github.com/perraas/"
 baseurl:
-
+# Social Profiles
+github_username:   perraas
 
 markdown:          kramdown
 paginate:          10
