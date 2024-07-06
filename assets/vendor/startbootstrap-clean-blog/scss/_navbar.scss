@@ -1,7 +1,7 @@
 // Styling for the navbar
 #mainNav {
   position: absolute;
-  background-color: hotpink;
+  background-color: black;
   @include sans-serif-font;
   .navbar-brand {
     font-weight: 800;
@@ -69,7 +69,7 @@
       -moz-transition: -moz-transform 0.2s;
       transition: transform 0.2s;
       border-bottom: 1px solid darken($white, .05);
-      background-color: hotpink;
+      background-color: black;
       .navbar-brand {
         color: $gray-900;
         &:focus,
