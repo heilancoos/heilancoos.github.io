@@ -1,0 +1,39 @@
+---
+layout: clean-page
+title: Tags
+description: "Posts organized by tags"
+background: '/img/bg-index.jpg'
+---
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8 col-md-10 mx-auto">
+      
+      {% assign tags_list = site.tags %}
+      {% if tags_list.first[0] == null %}
+        {% for tag in tags_list %}
+          <a href="#{{ tag }}" class="badge badge-primary">{{ tag }} ({{ site.tags[tag].size }})</a>
+        {% endfor %}
+      {% else %}
+        {% for tag in tags_list %}
+          <a href="#{{ tag[0] }}" class="badge badge-primary">{{ tag[0] }} ({{ tag[1].size }})</a>
+        {% endfor %}
+      {% endif %}
+      
+      <hr>
+      
+      {% for tag in site.tags %}
+        <h3 id="{{ tag[0] }}">#{{ tag[0] }}</h3>
+        <ul>
+          {% for post in tag[1] %}
+            <li>
+              <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+              <small class="text-muted"> - {{ post.date | date: "%B %d, %Y" }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+      
+    </div>
+  </div>
+</div>

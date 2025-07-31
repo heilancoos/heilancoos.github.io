@@ -1,0 +1,68 @@
+// Mixins
+// Bootstrap Button Variant
+@mixin button-variant($color, $background, $border) {
+  color: $color;
+  border-color: $border;
+  background-color: $background;
+  &.focus,
+  &:focus {
+    color: $color;
+    border-color: rgba(0, 0, 0, 0.25);
+    background-color: rgba(var(--bs-primary-rgb), 0.9);
+  }
+  &:hover {
+    color: $color;
+    border-color: rgba(var(--bs-border-color-rgb), 0.88);
+    background-color: rgba(var(--bs-primary-rgb), 0.9);
+  }
+  &.active,
+  &:active,
+  .open > &.dropdown-toggle {
+    color: $color;
+    border-color: rgba(var(--bs-border-color-rgb), 0.88);
+    background-color: rgba(var(--bs-primary-rgb), 0.9);
+    &.focus,
+    &:focus,
+    &:hover {
+      color: $color;
+      border-color: rgba(0, 0, 0, 0.25);
+      background-color: rgba(var(--bs-primary-rgb), 0.83);
+    }
+  }
+  &.active,
+  &:active,
+  .open > &.dropdown-toggle {
+    background-image: none;
+  }
+  &.disabled,
+  &[disabled],
+  fieldset[disabled] & {
+    &.focus,
+    &:focus,
+    &:hover {
+      border-color: $border;
+      background-color: $background;
+    }
+  }
+  .badge {
+    color: $background;
+    background-color: $color;
+  }
+}
+@mixin transition-all() {
+  -webkit-transition: all 0.2s;
+  -moz-transition: all 0.2s;
+  transition: all 0.2s;
+}
+@mixin background-cover() {
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+@mixin serif-font() {
+  font-family: 'Comic Sans MS', serif;
+}
+@mixin sans-serif-font() {
+  font-family: 'Comic Sans MS', sans-serif;
+}
