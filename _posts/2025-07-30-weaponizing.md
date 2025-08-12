@@ -2,7 +2,7 @@
 title: "Weaponizing Reality: The Evolution of Deepfakes"
 layout: post
 background: '/img/leadspace_article.png'
-subtitle: "A blog discussing the evolution of deepfakes"
+subtitle: "Deepfakes are quickly becoming into a powerful tool for deception and manipulation. This blog examines the evolution of deepfake-based attacks, analyzing various real cases."
 artist: "socialmediasafety.org"
 tags: [research, ai, security]
 categories: [research]
