@@ -2,6 +2,7 @@
 title: "Simulating Ransomware with AWS KMS"
 layout: post
 background: '/img/kms-ransomware/kms-ransomware-diagram.png'
+img-thumbnail: '/img/kms-ransomware/kms-ransomware-diagram.png'
 subtitle: "From encryption to extortion: abusing KMS EXTERNAL keys in AWS"
 tags: [research, cloud, security]
 categories: [research]
