@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css?family=Abel|Dosis|Source+Code+Pro|Roboto+Slab:100|Source+Code+Pro|Source+Sans+Pro:200|Unica+One|Josefin+Sans:300|Nothing+You+Could+Do");
 body {
   background-color: rgba(255, 233, 237, 0.769);
-  font-size: 20px;
+  font-size: 16px;
   color: rgb(36, 33, 35);
   font-family: "Comic Sans MS", serif;
 }
@@ -368,7 +368,7 @@ h1[id] {
   }
 }
 em {
-  color: azure;
+  color: rgb(66, 199, 199);
   padding: 0 10px;
 }
 

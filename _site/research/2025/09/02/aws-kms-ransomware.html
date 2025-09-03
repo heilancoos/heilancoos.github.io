@@ -1,4 +1,104 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-09-03T11:36:54-05:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Simulating Ransomware with AWS KMS</title><link href="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html" rel="alternate" type="text/html" title="Simulating Ransomware with AWS KMS" /><published>2025-09-02T00:00:00-05:00</published><updated>2025-09-02T00:00:00-05:00</updated><id>http://localhost:4000/research/2025/09/02/aws-kms-ransomware</id><content type="html" xml:base="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<!DOCTYPE html>
+
+<html>
+
+  <head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>
+    Simulating Ransomware with AWS KMS - Heilan Cyber
+    
+  </title>
+
+  <meta name="description" content="Introduction">
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="icon" type="image/png" href="/img/favicon.ico">
+
+
+  <link rel="stylesheet" href="/assets/vendor/font-awesome/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html">
+  <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+
+</head>
+
+
+  <body>
+
+    <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <!-- <a class="navbar-brand" href="/">Start Bootstrap</a> -->
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/categories">Categories</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+    <script>
+  function copyToClipboard(){
+    //console.log(`Copied ${window.location.href}`);
+    var textArea = document.createElement("textarea");
+    textArea.value = window.location.href;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("Copy");
+    textArea.remove();
+
+    var tooltip = document.getElementById("tooltiptext");
+    tooltip.innerHTML = "Link copied";
+  }
+
+  function outFunc() {
+    var tooltip = document.getElementById("tooltiptext");
+    tooltip.innerHTML = "Copy Link";
+  }
+</script>
+<!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/kms-ransomware/kms-ransomware-diagram.png')">
+
+  <div class="overlay"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <div class="post-heading">
+          <h1>Simulating Ransomware with AWS KMS</h1>
+          <span class="meta">HC / September 02, 2025</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-10 col-md-10 mx-auto post-body">
+
+      <h2 id="introduction">Introduction</h2>
 
 <p>The AWS Key Management Service (KMS) allows customers to create and manage encryption keys for their cloud resources,  with similar services existing in <a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/key-management">Azure</a> and <a href="https://cloud.google.com/security/products/security-key-management?hl=en">Google Cloud Platform (GCP)</a>. KMS is essential for customers to properly secure their resources in the shared responsibility model. AWS makes it clear that while they provide the service and ensure the service itself is secure, it is the customer’s responsibility for how the service is used and how keys are protected.</p>
 
@@ -354,84 +454,79 @@ AWS-managed keys are the default for most services. These keys are in the format
 
 <p>KMS is one of the most powerful services within AWS, allowing customers to add another layer of security within their environment. However, just like all services within AWS, if the attacker gets ahold of the right permissions, it can wreak havoc in a customer’s AWS environment. AWS has measures to prevent this but it’s ultimately up to the customer to choose their risk level.</p>
 
-<p>I highly recommend reading more about this and similar techniques from <a href="https://www.chrisfarris.com/">Chris Farris</a> and <a href="https://www.fogsecurity.io/blog">Fog Security</a>.</p>]]></content><author><name>HC</name></author><category term="research" /><category term="research" /><category term="cloud" /><category term="security" /><summary type="html"><![CDATA[Introduction]]></summary></entry><entry><title type="html">Weaponizing Reality: The Evolution of Deepfakes</title><link href="http://localhost:4000/research/2025/07/30/weaponizing.html" rel="alternate" type="text/html" title="Weaponizing Reality: The Evolution of Deepfakes" /><published>2025-07-30T00:00:00-05:00</published><updated>2025-07-30T00:00:00-05:00</updated><id>http://localhost:4000/research/2025/07/30/weaponizing</id><content type="html" xml:base="http://localhost:4000/research/2025/07/30/weaponizing.html"><![CDATA[<p><strong>Originally posted on IBM Think here:</strong> <a href="https://www.ibm.com/think/x-force/weaponizing-reality-evolution-deepfake-technology">Blog Link</a></p>
+<p>I highly recommend reading more about this and similar techniques from <a href="https://www.chrisfarris.com/">Chris Farris</a> and <a href="https://www.fogsecurity.io/blog">Fog Security</a>.</p>
 
-<h2 id="overview">Overview</h2>
-<p>For decades, phishing attacks have been playing on human emotions to scam them out of account credentials and money and still do. But as technology advanced leaps and bounds since the first phishing cases in the 1990’s, phishing is no longer just about spotting the obvious scam message with typos and grammatical mistakes. Now it means questioning if that call from your friend or boss is even real – even if it sounds exactly like them. With the rise of artificial intelligence, malicious actors are only growing stealthier and more sophisticated, and everyone needs to rethink what is real, get used to looking for fake signals, and learn how to better protect their identities on and offline.</p>
+      <div class="tooltipcontainer">
+        <img
+          onclick="copyToClipboard()"
+          onmouseout="outFunc()"
+          class="share-icon"
+          src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4Igp3aWR0aD0iMzIiIGhlaWdodD0iMzIiCnZpZXdCb3g9IjAgMCAxNzIgMTcyIgpzdHlsZT0iIGZpbGw6IzAwMDAwMDsiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJidXR0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1kYXNoYXJyYXk9IiIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAiIGZvbnQtZmFtaWx5PSJub25lIiBmb250LXdlaWdodD0ibm9uZSIgZm9udC1zaXplPSJub25lIiB0ZXh0LWFuY2hvcj0ibm9uZSIgc3R5bGU9Im1peC1ibGVuZC1tb2RlOiBub3JtYWwiPjxwYXRoIGQ9Ik0wLDE3MnYtMTcyaDE3MnYxNzJ6IiBmaWxsPSJub25lIj48L3BhdGg+PGcgZmlsbD0iI2ZmMDUwNSI+PGcgaWQ9InN1cmZhY2UxIj48cGF0aCBkPSJNMTM0LjM3NSwxMC43NWMtMTQuNzgxMjUsMCAtMjYuODc1LDEyLjA5Mzc1IC0yNi44NzUsMjYuODc1YzAsMS44NDc2NiAwLjIwOTk2LDMuNjExMzMgMC41NDU5LDUuMzc1bC00OC43MTA5NCwyMS45MTk5M2MtNC45MTMwOCwtNi43MTg3NSAtMTIuODA3NjEsLTExLjE2OTkzIC0yMS43MDk5NiwtMTEuMTY5OTNjLTE0Ljc4MTI1LDAgLTI2Ljg3NSwxMi4wOTM3NSAtMjYuODc1LDI2Ljg3NWMwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzguOTQ0MzMsMCAxNi45MjI4NSwtNC40OTMxNyAyMS43OTM5NSwtMTEuMjk1OWw0OC43NTI5MywyMS42Njc5N2MtMC40MTk5MiwxLjg0NzY2IC0wLjY3MTg3LDMuNzc5MjkgLTAuNjcxODcsNS43NTI5M2MwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzE0Ljc4MTI1LDAgMjYuODc1LC0xMi4wOTM3NSAyNi44NzUsLTI2Ljg3NWMwLC0xNC43ODEyNSAtMTIuMDkzNzUsLTI2Ljg3NSAtMjYuODc1LC0yNi44NzVjLTguOTQ0MzMsMCAtMTYuOTIyODUsNC40OTMxNyAtMjEuNzkzOTUsMTEuMjk1OWwtNDguNzUyOTMsLTIxLjYyNTk3YzAuNDE5OTMsLTEuODg5NjYgMC42NzE4OCwtMy44MjEyOSAwLjY3MTg4LC01Ljc5NDkzYzAsLTIuMDE1NjIgLTAuMjUxOTUsLTMuOTg5MjYgLTAuNjcxODcsLTUuODc4OTFsNDguNDU4OTksLTIxLjkxOTkyYzQuODcxMDksNy4wNTQ2OSAxMi45NzU1OCwxMS42NzM4MiAyMi4wODc4OSwxMS42NzM4MmMxNC43ODEyNSwwIDI2Ljg3NSwtMTIuMDkzNzUgMjYuODc1LC0yNi44NzVjMCwtMTQuNzgxMjUgLTEyLjA5Mzc1LC0yNi44NzUgLTI2Ljg3NSwtMjYuODc1ek0xMzQuMzc1LDIxLjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1ek0zNy42MjUsNjQuNWM4Ljk4NjMzLDAgMTYuMTI1LDcuMTM4NjggMTYuMTI1LDE2LjEyNWMwLDguOTg2MzMgLTcuMTM4NjcsMTYuMTI1IC0xNi4xMjUsMTYuMTI1Yy04Ljk4NjMyLDAgLTE2LjEyNSwtNy4xMzg2NyAtMTYuMTI1LC0xNi4xMjVjMCwtOC45ODYzMiA3LjEzODY4LC0xNi4xMjUgMTYuMTI1LC0xNi4xMjV6TTEzNC4zNzUsMTA3LjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1eiI+PC9wYXRoPjwvZz48L2c+PC9nPjwvc3ZnPg=="
+          alt="Share Icon"
+        >
+        <span id="tooltiptext" class="tooltiptext">Copy Link</span>
+      </div>
+      <hr>
+      <div class="clearfix">
 
-<p>Social engineering is the umbrella term for a plethora of ways by which attackers and fraudsters manage to trick people into divulging information that will compromise their identity and accounts. This threat also remains one of the top attack vectors that leads to a <a href="https://www.ibm.com/reports/threat-intelligence">data breach</a>. This has been mitigated to an extent by employee training and advanced spam filters but does not appear to apply to the trending Deepfake threat. In 2024, over <a href="https://www.forbes.com/sites/edwardsegal/2024/11/10/80-of-surveyed-businesses-dont-have-plans-for-an-ai-related-crisis/">80% of companies reported they have no protocols in place to fight back against Deepfake-based attacks</a>.</p>
+        
+        <a class="btn btn-primary float-left" href="/research/2025/07/30/weaponizing.html" data-toggle="tooltip" data-placement="top" title="Weaponizing Reality: The Evolution of Deepfakes">&larr; Previous<span class="d-none d-md-inline"> Post</span></a>
+        
+        
 
-<p>Furthermore, <a href="https://cybertechnologyinsights.com/threat-management/pindrops-2025-report-shows-1300-percent-spike-in-deepfake-fraud-cases/">Pindrop’s 2025 Voice Intelligence Report</a> found a sharp uptick in Deepfake fraud compared to previous years reporting a 1300% increase. Deepfake attacks represent a daunting new frontier, one where you can no longer trust what you see – or hear.</p>
+      </div>
 
-<h2 id="what-exactly-are-deepfakes">What exactly are “deepfakes”?</h2>
+    </div>
+  </div>
+</div>
 
-<p>The technology behind deepfakes is called <a href="https://www.ibm.com/think/topics/generative-adversarial-networks">Generative Adversarial Network</a> (GAN). It was developed in 2014 and published in a research paper by researcher <a href="https://en.wikipedia.org/wiki/Ian_Goodfellow">Ian Goodfellow</a>, and his colleagues. A GAN is a type of machine learning model that generates new data by learning patterns from training datasets. But what does this actually mean? A GAN consists of two neural networks that constantly compete with each other to create realistic, fake data. One network is the Generator, the other is the Discriminator.</p>
+    <!-- Footer -->
 
-<p>The Generator creates synthetic content, and the Discriminator determines whether the content is real. This back and forth eventually makes the fake content look as real as possible. Think of it like sharpening a sword against a steel block. Every time the sword (the Generator) is run against the steel block (the Discriminator), the sword gets sharper.</p>
+<hr>
 
-<p><img src="/img/how-gans-work.jpg" alt="https://pilot44.com/insights/the-evolution-of-generative-ai" /></p>
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          
+          <li class="list-inline-item">
+            <a href="https://linkedin.com/in/" title="LinkedIn">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+           </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/heilancoos">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; HC 2025</p>
+      </div>
+    </div>
+  </div>
+</footer>
 
-<p>A few years later, in 2017, the term “deepfake” was coined by a Reddit user operating under the name “deepfakes”. This person abused the GAN concept in a malicious way. Using an account dedicated to adult content, he released some of the first publicly distributed deepfake videos using images of unrelated personspeople to create fake content and distribute it online.</p>
 
-<p>While early deepfakes were usually low quality and easier to spot. Today, that’s no longer the case. People are posting voice and image deepfakes which are very hard to identify as fake, challenging the very concept of identity and trust in the virtual world.</p>
+    <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
 
-<h2 id="deepfake-timeline---deeply-disturbing">Deepfake Timeline - Deeply Disturbing</h2>
-<p>Deepfakes entered the mainstream in 2018, with the release of accessible open source deepfake tools like DeepFaceLab. Since then, the technical barriers to creating realistic deepfakes have steadily declined. In 2023, the deepfake tool market skyrocketed, with a 44% increase in development of these tools. Unfortunately, the creation of non-consensual explicit content of women has served as a motivating factor for the popularization of deepfake tools. The problem is rampant, with <a href="https://www.securityhero.io/state-of-deepfakes/">Security Hero</a> reporting that in 2023, approximately 98% of deepfake videos online are explicit in nature and only 1% of targets in that category are male.</p>
+<script src="/assets/scripts.js"></script>
 
-<p>In recent years, deepfakes have also been used to manipulate politics and consumer fraud. Most of the targets of deepfakes are public figures, largely because they have a wealth of media samples available on the internet.</p>
 
-<p>In early 2024, <a href="https://apnews.com/article/new-hampshire-primary-biden-ai-deepfake-robocall-f3469ceb6dd613079092287994663db5">New Hampshire constituents</a> received a robocall that impersonated President Biden to discourage them from voting in the Democratic primary election. The malicious actor even spoofed the caller ID to appear as the Democratic Party chair. This incident is a clear example of voice phishing, a.k.a. “vishing”, using deepfake audio. Since then, <a href="https://apnews.com/article/fcc-elections-artificial-intelligence-robocalls-regulations-a8292b1371b3764916461f60660b93e6">the FCC has banned the use of AI-generated voices in robocalls</a> for voter suppression.</p>
 
-<p>There have also been multiple deepfake videos featuring prominent public figures such as  <a href="https://www.engadget.com/deepfakes-of-elon-musk-are-pushing-crypto-giveaway-scams-on-youtube-live-200700886.html">Elon Musk</a>, the New Zealand Prime Minister, <a href="https://www.rnz.co.nz/news/national/531353/pensioner-loses-224k-after-being-tricked-by-ai-deepfake-christopher-luxon-cryptocurrency-investment-scam">Christopher Luxon</a> and <a href="https://www.ctvnews.ca/toronto/article/ontario-man-loses-12k-to-deepfake-scam-involving-prime-minister-justin-trudeau/">Canadian Prime Minister Justin Trudeau</a>. These deepfake videos promoted various cryptocurrency schemes to scam potential investors.</p>
 
-<p>There are also more legitimate uses of deepfake technology, with <a href="https://news.mit.edu/2020/mit-tackles-misinformation-in-event-of-moon-disaster-0720">researchers at MIT’s Center for Advanced Virtuality</a> deepfaking President Richard Nixon delivering a speech about a failed moon landing. This project was created by students to warn about the importance of media literacy in the age of deepfakes. <a href="https://boldentrance.com/will-disney-researchs-ai-fran-revolutionize-re-aging-of-actors/">Disney</a> and other major Hollywood studios have also invested in using the technology for de-aging actors and including advanced visual effects in movies.</p>
+  </body>
 
-<h2 id="notable-incidents-using-deepfakes">Notable incidents using deepfakes</h2>
-<p>Below are four notable cases where deepfake technology was used in fraud, deception and impersonation.</p>
-
-<h3 id="arup">Arup</h3>
-<p>In early 2024, the multinational engineering firm Arup confirmed that it lost USD25 million to a deepfake scam.</p>
-
-<p>A <a href="https://www.cnn.com/2024/05/16/tech/arup-deepfake-scam-loss-hong-kong-intl-hnk">Hong Kong employee</a> received a phishing email from Arup’s UK office requesting a “secret” transaction. Naturally, the employee was suspicious at first. His suspicion was put to rest when he joined a video call with the Chief Financial Officer and several other employees. He recognized these faces and their voices, so he sent 200 million Hong Kong dollars (USD25.6M). The money was sent in 15 transfers to <a href="https://www.techmonitor.ai/technology/cybersecurity/arup-revealed-as-victim-of-25m-deepfake-scam?cf-view">five different banks</a> before the fraud was discovered.</p>
-
-<p>Arup’s Chief Digital Information Officer, Rob Greig, discussed the incident at the time with the <a href="https://www.weforum.org/stories/2025/02/deepfake-ai-cybercrime-arup/">World Economic Forum</a>. Greig described the incident as more “technology-enhanced social engineering” rather than a cyberattack. There was no system compromise or unauthorized access to data. People were tricked into carrying out what they thought were genuine transactions. Greig even tried to create a deepfake video of himself, and it took him less than an hour. He also believes this happens more often than people might think.</p>
-
-<p>This case highlights the devastating financial damage deepfake phishing can have on a company. Similar cases have targeted individuals as well, with senior citizens receiving distress calls impersonating their loved ones.</p>
-
-<h3 id="high-school-principal-incident">High school principal incident</h3>
-<p>The danger of deepfakes extends not only to public figures and company executives. In 2024, a case emerged of <a href="https://www.bbc.com/news/world-us-canada-68907895">a principal in Baltimore</a> who had his life turned upside down because of an AI-generated audio clip of him appearing to make racist and antisemitic statements.</p>
-
-<p>A fabricated audio clip of the principal of Pikesville High School, Eric Eiswert, went viral online as he appeared to make harmful and derogatory statements. The clip received well over two million views. There was immense backlash both online and in real life. The local community was especially outraged as Pikesville has a large black and Jewish population.</p>
-
-<p>Due to the backlash, Eiswert went on leave, and police were stationed to guard his home amidst the vicious threats and harassment he was receiving. Security was also increased at the school.</p>
-
-<p>Eiswert’s initial defense that the clip was fake was <a href="https://www.bbc.com/news/articles/ckg9k5dv1zdo">poorly received</a> and dismissed as Eiswert avoiding accountability. The clip was initially posted in January 2024. It took until April for the local police to confirm the recording was falsified. Police arrested the school’s athletic director, Dazhon Darien, on charges related to the fake clip. Eiswert had been investigating Darien for theft of school money and work performance issues. In April 2025, Dazhon Darien pleaded guilty, having purchased AI cloning tools.</p>
-
-<p>The incident had damaging effects on Eiswert’s reputation, leaving Eiswert to move jobs and work in another school.</p>
-
-<h3 id="uk-ceo-voice-fraud">UK CEO voice fraud</h3>
-<p>One of the first major deepfake attacks occurred in 2019 when deepfake audio was <a href="https://www.trendmicro.com/vinfo/mx/security/news/cyber-attacks/unusual-ceo-fraud-via-deepfake-audio-steals-us-243-000-from-u-k-company">used to steal USD243,000</a> from a UK company.</p>
-
-<p>The CEO of an unnamed UK energy company received a call from the CEO of the German parent company. The <a href="https://www.forbes.com/sites/jessedamiani/2019/09/03/a-voice-deepfake-was-used-to-scam-a-ceo-out-of-243000/">UK CEO noted</a> that the call even carried the “melody” of the German CEO. The fraudsters called a total of three times. In the first call, the fraudster requested the UK CEO to transfer USD243,000 to the bank account of a Hungarian supplier. The CEO complied. In the second call, they claimed the transfer was reimbursed. The third and final call, the caller was seeking a follow-up payment. After the UK CEO noticed the transfer was, in fact, not reimbursed, he refused to send any follow-up payments. The first amount was transferred to the Hungarian bank account, then to Mexico and elsewhere, making attribution difficult.</p>
-
-<p>This early deepfake fraud case is a canary for how ambitious and sophisticated these schemes would later become.</p>
-
-<h3 id="threat-actor-group-bluenoroff-crypto-scheme">Threat actor group BlueNoroff crypto scheme</h3>
-<p>As one of the more recent attacks occurring in June 2025, the threat actor group based in North Korea, BlueNoroff, utilized deepfake technology to target cryptocurrency companies.</p>
-
-<p>A cryptocurrency company employee received a Calendly link for a Google Meet. Two weeks later, the employee joined a Zoom call <a href="https://www.huntress.com/blog/inside-bluenoroff-web3-intrusion-analysis">controlled by the threat actor</a>. The call was filled with deepfaked versions of senior leadership. When the employee experienced an audio issue, the attackers sent a malicious Zoom Extension. The Zoom Extension was actually a script that deployed malware to hijack any crypto wallets found on the system.</p>
-
-<p>This attack highlights how threat actors are now combining traditional social engineering with real-time deepfake impersonation, making verification significantly harder for end users.</p>
-
-<h3 id="a-threat-to-reckon-with">A threat to reckon with</h3>
-<p>Deepfakes are no longer a potential threat; the threat and its consequences are <a href="https://www.dhs.gov/sites/default/files/publications/increasing_threats_of_deepfake_identities_0.pdf">very real and present</a>. Deepfakes today are at the point of undermining trust in the online identity verification process that many organizations, especially in the financial sector, have come to rely upon. With more people than ever authenticating themselves using biometrics across all their devices, the growth in the malicious use of deepfakes can lead to a dire need to <a href="https://www.forbes.com/councils/forbestechcouncil/2024/08/02/in-the-deepfake-era-its-time-to-overhaul-identity-verification/">rethink authentication security</a> within the next five years, or sooner.</p>
-
-<p>As shown in recent attacks, the barrier to entry for creating realistic deepfakes has dramatically decreased. From cloned voices to full video impersonations, deepfakes empower scammers and fraudsters in ways that are harder to detect and defend against.</p>
-
-<p>Another aspect that should be taken seriously is the use of deepfakes by school bullies who taunt and harass their peers, target educators or try to depict themselves in situations that are meant to threaten and intimidate others. <a href="https://www.neari.org/advocating-change/new-from-neari/ai-deepfakes-disturbing-trend-school-cyberbullying">This cyberbullying trend</a> is only getting worse over time, and calls on parents to educate children and be very vigilant about potential threats.</p>
-
-<p>Understanding the threat is the first step to defending against it. With more end-user security training and leveraging emerging deepfake detection tools, organizations and individuals can begin to fight back against this new threat.</p>
-
-<p><em>Want to learn more? Contact X-Force experts for a 1:1 briefing and talk about deepfakes, deepfake threats and how your team can train to identify them and thwart threat actors before damage is done.</em></p>
-
-<p><em>Our Cyber Range team invites you to train like you fight at one of our global locations, your offices or virtually. <a href="https://www.ibm.com/services/xforce-cyber-range">Contact us today</a>.</em></p>]]></content><author><name>HC</name></author><category term="research" /><category term="research" /><category term="ai" /><category term="security" /><summary type="html"><![CDATA[Originally posted on IBM Think here: Blog Link]]></summary></entry></feed>
+</html>
