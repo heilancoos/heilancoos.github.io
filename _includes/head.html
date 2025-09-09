@@ -2,6 +2,39 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  {% capture meta_title %}
+    {% if page.share-title %}
+      {{ page.share-title | strip_html | xml_escape }}
+    {% elsif page.title %}
+      {{ page.title | strip_html | xml_escape }}
+    {% else %}
+      {{ site.title | strip_html | xml_escape }}
+    {% endif %}
+  {% endcapture %}
+
+  {% capture meta_description %}
+    {% if page.share-description %}
+      {{ page.share-description | strip_html | xml_escape }}
+    {% elsif page.excerpt %}
+      {{ page.excerpt | strip_html | xml_escape }}
+    {% elsif page.subtitle %}
+      {{ page.subtitle | strip_html | xml_escape }}
+    {% else %}
+      {{ page.content | strip_html | xml_escape | truncatewords: 50 }}
+    {% endif %}
+  {% endcapture %}
+
+  {% capture meta_image %}
+    {% if page.image %}
+      {{ page.image }}
+    {% elsif page.background %}
+      {{ page.background }}
+    {% else %}
+      /assets/images/default-preview.jpg
+    {% endif %}
+  {% endcapture %}
+  {% assign meta_image = meta_image | strip %}
 
   <title>
     {% if page.title %}{{ page.title | escape }} - {{ site.title | escape }}
