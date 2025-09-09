@@ -4,6 +4,9 @@ layout: post
 background: '/img/kms-ransomware/kms-ransomware-diagram.png'
 img-thumbnail: '/img/kms-ransomware/kms-ransomware-diagram.png'
 subtitle: "From encryption to extortion: abusing KMS EXTERNAL keys in AWS"
+image: '/img/kms-ransomware/kms-ransomware-diagram.png'  # <-- used for og:image / twitter:image
+excerpt: "How attackers can abuse AWS KMS with BYOK and external key material to simulate ransomware in cloud environments."  # <-- used for description/meta
+subtitle: "From encryption to extortion: abusing KMS EXTERNAL keys in AWS"
 tags: [research, cloud, security]
 categories: [research]
 ---
