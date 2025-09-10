@@ -6,6 +6,13 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  
+
+  
+
+  
+  
 
   <title>
     Tags - Heilan Cyber
@@ -27,7 +34,40 @@
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="http://localhost:4000/tags.html">
   <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+  
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Heilan Cyber">
+  <meta property="og:title" content="
+    
+      Tags
+    
+  ">
+  <meta property="og:description" content="
+    
+      {% assign tags_list = site.tags %} {% if tags_list.first[0] == null %} {% for tag in tags_list %} {{ tag }} ({{ site.tags[tag].size }}) {% endfor %} {% else %} {% for tag in tags_list %} {{ tag[0] }} ({{ tag[1].size }}) {% endfor %} {% endif %} {% for...
+    
+  ">
+  <meta property="og:url" content="http://localhost:4000/tags.html">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="http://localhost:4000/img/bg-index.jpg">
 
+   <!-- Twitter Card -->
+  
+    <meta name="twitter:card" content="summary_large_image">
+  
+  <meta name="twitter:title" content="
+    
+      Tags
+    
+  ">
+  <meta name="twitter:description" content="
+    
+      {% assign tags_list = site.tags %} {% if tags_list.first[0] == null %} {% for tag in tags_list %} {{ tag }} ({{ site.tags[tag].size }}) {% endfor %} {% else %} {% for tag in tags_list %} {{ tag[0] }} ({{ tag[1].size }}) {% endfor %} {% endif %} {% for...
+    
+  ">
+  <meta name="twitter:image" content="http://localhost:4000/img/bg-index.jpg">
+  <meta name="twitter:site" content="@">
+  <meta name="twitter:creator" content="@">
 </head>
 
 

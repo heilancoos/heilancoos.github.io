@@ -6,13 +6,20 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  
+
+  
+
+  
+  
 
   <title>
     Simulating Ransomware with AWS KMS - Heilan Cyber
     
   </title>
 
-  <meta name="description" content="Introduction">
+  <meta name="description" content="How attackers can abuse AWS KMS with BYOK and external key material to simulate ransomware in cloud environments.">
 
   <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
   <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
@@ -27,7 +34,40 @@
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html">
   <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+  
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Heilan Cyber">
+  <meta property="og:title" content="
+    
+      Simulating Ransomware with AWS KMS
+    
+  ">
+  <meta property="og:description" content="
+    
+      How attackers can abuse AWS KMS with BYOK and external key material to simulate ransomware in cloud environments.
+    
+  ">
+  <meta property="og:url" content="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://heilancoos.github.io/img/kms-ransomware/kms-ransomware-diagram.png">
 
+   <!-- Twitter Card -->
+  
+    <meta name="twitter:card" content="summary_large_image">
+  
+  <meta name="twitter:title" content="
+    
+      Simulating Ransomware with AWS KMS
+    
+  ">
+  <meta name="twitter:description" content="
+    
+      How attackers can abuse AWS KMS with BYOK and external key material to simulate ransomware in cloud environments.
+    
+  ">
+  <meta name="twitter:image" content="https://heilancoos.github.io/img/kms-ransomware/kms-ransomware-diagram.png">
+  <meta name="twitter:site" content="@">
+  <meta name="twitter:creator" content="@">
 </head>
 
 
@@ -143,7 +183,7 @@ AWS-managed keys are the default for most services. These keys are in the format
   <li>They delete the imported key material, rendering the key unusable for decryption.</li>
 </ol>
 
-<p><img src="/img/kms-ransomware/kms-ransomware-diagram.png" alt="image01" width="720" class="mx-auto d-block" /></p>
+<p><img src="/img/kms-ransomware/attack-diagram-big.png" alt="image01" width="720" class="mx-auto d-block" /></p>
 
 <p>Once the attacker deletes the imported key material, the resources encrypted with the external key will still reference it. This means that these resources cannot have any read or write actions performed on them past this point as AWS can no longer use the specified key for decryption.</p>
 
@@ -267,7 +307,12 @@ AWS-managed keys are the default for most services. These keys are in the format
 
 <p>The attacker can import new material into an existing key.</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms import-key-material --key-id &lt;key-id&gt; --import-type NEW_KEY_MATERIAL --encrypted-key-material fileb://encrypted_key_material.bin --import-token fileb://import_token.bin --expiration-model KEY_MATERIAL_DOES_NOT_EXPIRE
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws kms import-key-material <span class="se">\</span>
+ <span class="nt">--key-id</span> &lt;key-id&gt; <span class="se">\</span>
+ <span class="nt">--import-type</span> NEW_KEY_MATERIAL <span class="se">\</span>
+ <span class="nt">--encrypted-key-material</span> fileb://encrypted_key_material.bin <span class="se">\</span>
+ <span class="nt">--import-token</span> fileb://import_token.bin <span class="se">\</span>
+ <span class="nt">--expiration-model</span> KEY_MATERIAL_DOES_NOT_EXPIRE
 </code></pre></div></div>
 
 <p><img src="/img/kms-ransomware/import-type-new-key-material.png" alt="image5" width="720" class="mx-auto d-block" /></p>

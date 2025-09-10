@@ -6,6 +6,13 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  
+
+  
+
+  
+  
 
   <title>
     Posts - Heilan Cyber
@@ -27,7 +34,40 @@
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="http://localhost:4000/posts/">
   <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+  
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Heilan Cyber">
+  <meta property="og:title" content="
+    
+      Posts
+    
+  ">
+  <meta property="og:description" content="
+    
+      {% for post in paginator.posts %} {{ post.title }} {{ post.date | date: &apos;%B %d, %Y&apos; }} {% if post.subtitle %} {{ post.subtitle }} {% else %} {{ post.excerpt | strip_html | truncatewords: 20 }} {% endif %} {% endfor %} {% if paginator.total_pages &gt; 1 %} {% if paginator.previous_page...
+    
+  ">
+  <meta property="og:url" content="http://localhost:4000/posts/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="http://localhost:4000/img/bg-train.jpg">
 
+   <!-- Twitter Card -->
+  
+    <meta name="twitter:card" content="summary_large_image">
+  
+  <meta name="twitter:title" content="
+    
+      Posts
+    
+  ">
+  <meta name="twitter:description" content="
+    
+      {% for post in paginator.posts %} {{ post.title }} {{ post.date | date: &apos;%B %d, %Y&apos; }} {% if post.subtitle %} {{ post.subtitle }} {% else %} {{ post.excerpt | strip_html | truncatewords: 20 }} {% endif %} {% endfor %} {% if paginator.total_pages &gt; 1 %} {% if paginator.previous_page...
+    
+  ">
+  <meta name="twitter:image" content="http://localhost:4000/img/bg-train.jpg">
+  <meta name="twitter:site" content="@">
+  <meta name="twitter:creator" content="@">
 </head>
 
 

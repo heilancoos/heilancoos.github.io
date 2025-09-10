@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  {% include head-with-toc.html %}
+  <body>
+    {% include navbar.html %}
+
+    <!-- Page Header -->
+    {% if page.background %}
+    <header class="masthead" style="background-image: url('{{ page.background | prepend: site.baseurl | replace: '/', '/' }}')">
+    {% else %}
+    <header class="masthead">
+    {% endif %}
+      <div class="overlay"></div>
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-8 col-md-10 mx-auto">
+            <div class="post-heading">
+              <h1>{{ page.title }}</h1>
+              <span class="meta">HC / {{ page.date | date: '%B %d, %Y' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="row">
+        <!-- TOC Sidebar -->
+        <aside class="col-lg-3 d-none d-lg-block">
+          <div class="toc">
+            <h5>Contents</h5>
+            <ul id="toc-list" class="list-unstyled"></ul>
+          </div>
+        </aside>
+
+        <!-- Post Body -->
+        <div class="col-lg-9 col-md-12 post-body">
+          {{ content }}
+
+          <!-- Share Button -->
+          <div class="tooltipcontainer">
+            <img
+              onclick="copyToClipboard()"
+              onmouseout="outFunc()"
+              class="share-icon"
+              src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4Igp3aWR0aD0iMzIiIGhlaWdodD0iMzIiCnZpZXdCb3g9IjAgMCAxNzIgMTcyIgpzdHlsZT0iIGZpbGw6IzAwMDAwMDsiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJidXR0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1kYXNoYXJyYXk9IiIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAiIGZvbnQtZmFtaWx5PSJub25lIiBmb250LXdlaWdodD0ibm9uZSIgZm9udC1zaXplPSJub25lIiB0ZXh0LWFuY2hvcj0ibm9uZSIgc3R5bGU9Im1peC1ibGVuZC1tb2RlOiBub3JtYWwiPjxwYXRoIGQ9Ik0wLDE3MnYtMTcyaDE3MnYxNzJ6IiBmaWxsPSJub25lIj48L3BhdGg+PGcgZmlsbD0iI2ZmMDUwNSI+PGcgaWQ9InN1cmZhY2UxIj48cGF0aCBkPSJNMTM0LjM3NSwxMC43NWMtMTQuNzgxMjUsMCAtMjYuODc1LDEyLjA5Mzc1IC0yNi44NzUsMjYuODc1YzAsMS44NDc2NiAwLjIwOTk2LDMuNjExMzMgMC41NDU5LDUuMzc1bC00OC43MTA5NCwyMS45MTk5M2MtNC45MTMwOCwtNi43MTg3NSAtMTIuODA3NjEsLTExLjE2OTkzIC0yMS43MDk5NiwtMTEuMTY5OTNjLTE0Ljc4MTI1LDAgLTI2Ljg3NSwxMi4wOTM3NSAtMjYuODc1LDI2Ljg3NWMwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzguOTQ0MzMsMCAxNi45MjI4NSwtNC40OTMxNyAyMS43OTM5NSwtMTEuMjk1OWw0OC43NTI5MywyMS42Njc5N2MtMC40MTk5MiwxLjg0NzY2IC0wLjY3MTg3LDMuNzc5MjkgLTAuNjcxODcsNS43NTI5M2MwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzE0Ljc4MTI1LDAgMjYuODc1LC0xMi4wOTM3NSAyNi44NzUsLTI2Ljg3NWMwLC0xNC43ODEyNSAtMTIuMDkzNzUsLTI2Ljg3NSAtMjYuODc1LC0yNi44NzVjLTguOTQ0MzMsMCAtMTYuOTIyODUsNC40OTMxNyAtMjEuNzkzOTUsMTEuMjk1OWwtNDguNzUyOTMsLTIxLjYyNTk3YzAuNDE5OTMsLTEuODg5NjYgMC42NzE4OCwtMy44MjEyOSAwLjY3MTg4LC01Ljc5NDkzYzAsLTIuMDE1NjIgLTAuMjUxOTUsLTMuOTg5MjYgLTAuNjcxODcsLTUuODc4OTFsNDguNDU4OTksLTIxLjkxOTkyYzQuODcxMDksNy4wNTQ2OSAxMi45NzU1OCwxMS42NzM4MiAyMi4wODc4OSwxMS42NzM4MmMxNC43ODEyNSwwIDI2Ljg3NSwtMTIuMDkzNzUgMjYuODc1LC0yNi44NzVjMCwtMTQuNzgxMjUgLTEyLjA5Mzc1LC0yNi44NzUgLTI2Ljg3NSwtMjYuODc1ek0xMzQuMzc1LDIxLjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1ek0zNy42MjUsNjQuNWM4Ljk4NjMzLDAgMTYuMTI1LDcuMTM4NjggMTYuMTI1LDE2LjEyNWMwLDguOTg2MzMgLTcuMTM4NjcsMTYuMTI1IC0xNi4xMjUsMTYuMTI1Yy04Ljk4NjMyLDAgLTE2LjEyNSwtNy4xMzg2NyAtMTYuMTI1LC0xNi4xMjVjMCwtOC45ODYzMiA3LjEzODY4LC0xNi4xMjUgMTYuMTI1LC0xNi4xMjV6TTEzNC4zNzUsMTA3LjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1eiI+PC9wYXRoPjwvZz48L2c+PC9nPjwvc3ZnPg=="
+              alt="Share Icon"
+            >
+            <span id="tooltiptext" class="tooltiptext">Copy Link</span>
+          </div>
+
+          <hr>
+          <div class="clearfix">
+            {% if page.previous.url %}
+            <a class="btn btn-primary float-left" href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}" title="{{ page.previous.title }}">&larr; Previous<span class="d-none d-md-inline"> Post</span></a>
+            {% endif %}
+            {% if page.next.url %}
+            <a class="btn btn-primary float-right" href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}" title="{{ page.next.title }}">Next<span class="d-none d-md-inline"> Post</span> &rarr;</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% include footer.html %}
+    {% include scripts.html %}
+
+    <script>
+      // Copy link helpers
+      function copyToClipboard(){ var t=document.createElement("textarea");t.value=window.location.href;document.body.appendChild(t);t.select();document.execCommand("Copy");t.remove();document.getElementById("tooltiptext").innerHTML="Link copied"; }
+      function outFunc(){ document.getElementById("tooltiptext").innerHTML="Copy Link"; }
+
+      // TOC generator
+      document.addEventListener("DOMContentLoaded", function () {
+        const toc = document.getElementById("toc-list");
+        const headers = document.querySelectorAll(".post-body h2, .post-body h3");
+        headers.forEach((header, index) => {
+          if (!header.id) header.id = "section-" + index;
+          const link = document.createElement("a");
+          link.href = "#" + header.id;
+          link.textContent = header.textContent;
+          const item = document.createElement("li");
+          item.className = header.tagName.toLowerCase();
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      });
+    </script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const tocLinks = document.querySelectorAll(".toc a");
+    const sections = [...tocLinks].map(link => document.querySelector(link.getAttribute("href")));
+
+    function onScroll() {
+        let scrollPos = window.scrollY + 120; // offset for navbar height
+        let current;
+
+        sections.forEach((section, i) => {
+        if (section.offsetTop <= scrollPos) {
+            current = tocLinks[i];
+        }
+        });
+
+        tocLinks.forEach(link => link.classList.remove("active"));
+        if (current) {
+        current.classList.add("active");
+        }
+    }
+
+    window.addEventListener("scroll", onScroll);
+    });
+    </script>
+    
+  </body>
+</html>

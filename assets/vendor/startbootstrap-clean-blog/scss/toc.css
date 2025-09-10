@@ -1,0 +1,79 @@
+/* TOC container */
+.toc {
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+
+  background: transparent;   /* remove gray box look */
+  padding: 0.5rem 1rem;
+  border-left: 2px solid #6c63ff; /* slim accent line */
+  font-family: "Comic Sans MS", sans-serif;
+  font-size: 0.8rem;          /* smaller text */
+  line-height: 1.4;
+}
+
+/* Title */
+.toc h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+/* Smaller H1 inside post body */
+.post-body h1 {
+  font-size: 1.4rem;   /* default is usually 2–2.5rem */
+  line-height: 1.3;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+
+
+/* Remove default list styles */
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* List items */
+.toc li.h2 {
+  margin-left: 0;
+  margin-bottom: 0.4rem;
+  font-size: 1.00rem;
+}
+.toc li.h3 {
+  margin-left: 1rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.75rem; /* even smaller for nested headings */
+}
+
+/* Links */
+.toc a {
+  color: #444;
+  text-decoration: none;
+  font-weight: 400; /* normal, not bold */
+}
+.toc a:hover {
+  color: #6c63ff;
+  text-decoration: underline;
+}
+
+/* Scrollbar (WebKit browsers) */
+.toc::-webkit-scrollbar {
+  width: 6px;
+}
+.toc::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+.toc::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+/* Active link */
+.toc a.active {
+  color: #6c63ff;
+  font-weight: 600;
+  border-left: 3px solid #6c63ff;
+  padding-left: 5px;
+}

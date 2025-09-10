@@ -52,7 +52,7 @@ The attack path that Chris describes in his blog is fairly straightforward.
 4. They re-encrypt sensitive AWS resources.  
 5. They delete the imported key material, rendering the key unusable for decryption.
 
-![image01](/img/kms-ransomware/kms-ransomware-diagram.png){: width="720" .mx-auto .d-block }
+![image01](/img/kms-ransomware/attack-diagram-big.png){: width="720" .mx-auto .d-block }
 
 Once the attacker deletes the imported key material, the resources encrypted with the external key will still reference it. This means that these resources cannot have any read or write actions performed on them past this point as AWS can no longer use the specified key for decryption.
 
@@ -138,8 +138,13 @@ If the attacker doesn't have the `kms:CreateKey` permission, they can rotate exi
 
 The attacker can import new material into an existing key.
 
-```
-aws kms import-key-material --key-id <key-id> --import-type NEW_KEY_MATERIAL --encrypted-key-material fileb://encrypted_key_material.bin --import-token fileb://import_token.bin --expiration-model KEY_MATERIAL_DOES_NOT_EXPIRE
+```bash
+aws kms import-key-material \
+ --key-id <key-id> \
+ --import-type NEW_KEY_MATERIAL \
+ --encrypted-key-material fileb://encrypted_key_material.bin \
+ --import-token fileb://import_token.bin \
+ --expiration-model KEY_MATERIAL_DOES_NOT_EXPIRE
 ```
 
 ![image5](/img/kms-ransomware/import-type-new-key-material.png){: width="720" .mx-auto .d-block }

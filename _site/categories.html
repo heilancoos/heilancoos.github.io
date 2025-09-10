@@ -6,6 +6,13 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  
+
+  
+
+  
+  
 
   <title>
     Categories - Heilan Cyber
@@ -27,7 +34,40 @@
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="http://localhost:4000/categories.html">
   <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+  
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Heilan Cyber">
+  <meta property="og:title" content="
+    
+      Categories
+    
+  ">
+  <meta property="og:description" content="
+    
+      {% for category in site.categories %} 📁 {{ category[0] | capitalize }} {{ category[1].size }} {% for post in category[1] %} {{ post.title }} {% if post.subtitle %} {{ post.subtitle }} {% endif %} Posted on {{ post.date | date: &apos;%B %d, %Y&apos; }} {% if post.tags.size &gt; 0 %}...
+    
+  ">
+  <meta property="og:url" content="http://localhost:4000/categories.html">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="http://localhost:4000/img/bg-index.jpg">
 
+   <!-- Twitter Card -->
+  
+    <meta name="twitter:card" content="summary_large_image">
+  
+  <meta name="twitter:title" content="
+    
+      Categories
+    
+  ">
+  <meta name="twitter:description" content="
+    
+      {% for category in site.categories %} 📁 {{ category[0] | capitalize }} {{ category[1].size }} {% for post in category[1] %} {{ post.title }} {% if post.subtitle %} {{ post.subtitle }} {% endif %} Posted on {{ post.date | date: &apos;%B %d, %Y&apos; }} {% if post.tags.size &gt; 0 %}...
+    
+  ">
+  <meta name="twitter:image" content="http://localhost:4000/img/bg-index.jpg">
+  <meta name="twitter:site" content="@">
+  <meta name="twitter:creator" content="@">
 </head>
 
 
