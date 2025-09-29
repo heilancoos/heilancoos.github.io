@@ -49,12 +49,13 @@
 .about-lead { font-size: 1.15rem; line-height: 1.75; }
 
 .about-highlights { margin: .75rem 0 1rem; }
-.highlight {
+.about-highlight {
   display: flex; align-items: center;
   background: rgba(0,0,0,.03);
   border-radius: 12px; padding: .6rem .8rem; margin-bottom: .5rem;
 }
-.highlight i { margin-right: .6rem; opacity: .7; }
+.about-highlight i { margin-right: .6rem; opacity: .7; }
+
 
 /* Chips (skill tags) */
 .chips { list-style: none; padding: 0; margin: .5rem 0 0; display: flex; flex-wrap: wrap; gap: .5rem; }

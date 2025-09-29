@@ -640,7 +640,7 @@ pre {
   margin: 0.75rem 0 1rem;
 }
 
-.highlight {
+.about-highlight {
   display: flex;
   align-items: center;
   background: rgba(0, 0, 0, 0.03);
@@ -649,7 +649,7 @@ pre {
   margin-bottom: 0.5rem;
 }
 
-.highlight i {
+.about-highlight i {
   margin-right: 0.6rem;
   opacity: 0.7;
 }
