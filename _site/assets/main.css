@@ -593,6 +593,8 @@ pre {
 .btn-pill {
   border-radius: 9999px;
   padding: 0.55rem 1rem;
+  background-color: #ff7a90;
+  border-color: #b14758;
 }
 
 .about-stats {
