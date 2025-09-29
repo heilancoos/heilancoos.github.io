@@ -49,7 +49,7 @@
   ">
   <meta property="og:url" content="http://localhost:4000/categories.html">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="http://localhost:4000/img/bg-index.jpg">
+  <meta property="og:image" content="http://localhost:4000/img/bg-categories.jpg">
 
    <!-- Twitter Card -->
   
@@ -65,7 +65,7 @@
       {% for category in site.categories %} 📁 {{ category[0] | capitalize }} {{ category[1].size }} {% for post in category[1] %} {{ post.title }} {% if post.subtitle %} {{ post.subtitle }} {% endif %} Posted on {{ post.date | date: &apos;%B %d, %Y&apos; }} {% if post.tags.size &gt; 0 %}...
     
   ">
-  <meta name="twitter:image" content="http://localhost:4000/img/bg-index.jpg">
+  <meta name="twitter:image" content="http://localhost:4000/img/bg-categories.jpg">
   <meta name="twitter:site" content="@">
   <meta name="twitter:creator" content="@">
 </head>
@@ -100,7 +100,7 @@
 
     <!-- Page Header -->
 
-  <header class="masthead" style="background-image: url('/img/bg-index.jpg')">
+  <header class="masthead" style="background-image: url('/img/bg-categories.jpg')">
 
     <div class="overlay"></div>
     <div class="container">
@@ -117,8 +117,11 @@
     </div>
   </header>
 
-  <!-- Main Content -->
+    <!-- Main Content -->
   <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <div class="container">
   <div class="row">
     <div class="col-lg-8 col-md-10 mx-auto">
       
@@ -190,6 +193,10 @@
     </div>
   </div>
 </div>
+      </div>
+    </div>
+  </div>
+
 
     <!-- Footer -->
 
@@ -201,9 +208,8 @@
       <div class="col-lg-8 col-md-10 mx-auto">
         <ul class="list-inline text-center">
           
-          
           <li class="list-inline-item">
-            <a href="https://linkedin.com/in/" title="LinkedIn">
+            <a href="https://linkedin.com/in/alexis-o">
               <span class="fa-stack fa-lg">
                 <i class="fa fa-circle fa-stack-2x"></i>
                 <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
@@ -211,6 +217,14 @@
            </a>
           </li>
           
+          <li class="list-inline-item">
+            <a href="https://x.com/_heilancoos">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
           
           <li class="list-inline-item">
             <a href="https://github.com/heilancoos">

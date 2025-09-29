@@ -1,0 +1,85 @@
+/* === ABOUT PAGE === */
+.about-hero {
+  margin: 2rem 0 1rem;
+}
+.about-hero { position: relative; padding-bottom: 1rem; }
+.about-hero::after {
+  content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 0; width: 120px; height: 3px; border-radius: 3px; background: rgba(0,0,0,.12);
+}
+
+.about-avatar {
+  width: 120px; height: 120px; border-radius: 9999px;
+  object-fit: cover;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+.about-name {
+  font-size: clamp(28px, 3.2vw, 44px);
+  margin: 0.75rem 0 0.25rem;
+}
+.about-tagline {
+  font-size: 1.1rem; opacity: .85; margin-bottom: 1rem;
+}
+.about-cta .btn {
+  margin: .25rem .35rem;
+}
+.btn-pill { border-radius: 9999px; padding: .55rem 1rem; }
+
+.about-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: .75rem; list-style: none; padding: 0; margin: 1rem auto 0; max-width: 540px;
+}
+.about-stats .stat {
+  display: block; font-weight: 800; font-size: 1.25rem;
+}
+.about-stats li {
+  background: rgba(0,0,0,.04);
+  border-radius: 12px; padding: .6rem .8rem;
+}
+
+/* Card with accent border like your posts */
+.about-card {
+  background: #fff; border-radius: 18px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 12px 30px rgba(0,0,0,.06);
+  border-left: 6px solid #ff7a90; /* pick an accent from your theme */
+  margin: 1.25rem 0 1.75rem;
+}
+.about-card h2 { margin-top: .25rem; }
+.about-lead { font-size: 1.15rem; line-height: 1.75; }
+
+.about-highlights { margin: .75rem 0 1rem; }
+.highlight {
+  display: flex; align-items: center;
+  background: rgba(0,0,0,.03);
+  border-radius: 12px; padding: .6rem .8rem; margin-bottom: .5rem;
+}
+.highlight i { margin-right: .6rem; opacity: .7; }
+
+/* Chips (skill tags) */
+.chips { list-style: none; padding: 0; margin: .5rem 0 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.chips li {
+  font-size: .95rem; background: #fff;
+  border: 1px solid rgba(0,0,0,.08); border-radius: 9999px;
+  padding: .35rem .7rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,.04);
+}
+
+/* Featured links */
+.about-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: .75rem; margin: 1rem 0 0; }
+.link-card {
+  display: flex; align-items: center; gap: .5rem;
+  background: #fff; border-radius: 14px; padding: .75rem .9rem;
+  border: 1px solid rgba(0,0,0,.06);
+  text-decoration: none; color: inherit;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.link-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,.08); }
+
+/* Gentle entrance animation (respects reduced motion) */
+@media (prefers-reduced-motion: no-preference) {
+  .about-hero, .about-card, .about-links { animation: fadeUp .5s ease both; }
+  .about-card { animation-delay: .05s; }
+  .about-links { animation-delay: .1s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+}

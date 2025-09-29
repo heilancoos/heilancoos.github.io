@@ -7,6 +7,7 @@ baseurl:
 # Social Profiles
 github_username:   heilancoos
 linkedin_username: alexis-o
+twitter_username: '_heilancoos'
 markdown:          kramdown
 paginate:          10
 paginate_path:     "/posts/page:num/"
