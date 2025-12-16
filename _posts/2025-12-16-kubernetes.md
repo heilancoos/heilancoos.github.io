@@ -138,7 +138,7 @@ Every component of Kubernetes can be made vulnerable in some way. In a misconfig
 
 Microsoft's threat matrix for Kubernetes illustrates the breadth of potential attack vectors across the MITRE ATT&CK framework. From initial access through privilege escalation to data exfiltration, every component presents potential vulnerabilities when misconfigured.
 
-![image1](/img/kubernetes/kube-images/01-Introduction/01-controlplane.png){: width="720" .mx-auto .d-block }
+![image1](/img/kubernetes/kube-images/01-Introduction/02-threat.png){: width="720" .mx-auto .d-block }
   
 This blog will cover some of the most pertinent attack techniques affecting Kubernetes clusters in the wild. I'll also use Falco to engineer detections and provide actionable mitigations for the attacks.
 
@@ -1601,7 +1601,7 @@ python3 k8s_spoofilizer.py --forge-sa-token default/test-user key_dir/
 ![image69](/img/kubernetes/kube-images/09-goldenticket/06-testusercreate.png){: width="720" .mx-auto .d-block }
 
 
-![image68](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm){: width="720" .mx-auto .d-block }
+![image68](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png){: width="720" .mx-auto .d-block }
   
 Kubernetes node certificates can also be forged. Any node name can be specified, including  a non-existent one.Kubernetes will treat non-existing node names  as a valid node identity.
 

@@ -33,7 +33,7 @@
   font-weight: 600;
 }
 /* Subsections */
-.toc li.h3 > a { color: #721d3c; font-weight: 500; }
+.toc li.h3 > a { color: #721d3c; font-weight: 600; }
 .toc li.h4 > a { color: #60283c; font-weight: 200;}
 .toc li.h5 > a { color: #cf769c; }
 
@@ -54,15 +54,17 @@
   margin-left: 0;
   margin-bottom: 0.4rem;
   font-size: 1.00rem;
+  line-height: 1.4;
 }
 .toc li.h3 {
   margin-left: 1rem;
   margin-bottom: 0.3rem;
   font-size: 0.95rem; /* even smaller for nested headings */
+  line-height: 1.4;
 }
 .toc li.h4 {
   margin-left: 1.5rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin-bottom: 0.25rem;
 }
 .toc li.h5 {

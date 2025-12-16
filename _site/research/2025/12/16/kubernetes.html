@@ -226,7 +226,7 @@
 
 <p>Microsoft’s threat matrix for Kubernetes illustrates the breadth of potential attack vectors across the MITRE ATT&amp;CK framework. From initial access through privilege escalation to data exfiltration, every component presents potential vulnerabilities when misconfigured.</p>
 
-<p><img src="/img/kubernetes/kube-images/01-Introduction/01-controlplane.png" alt="image1" width="720" class="mx-auto d-block" /></p>
+<p><img src="/img/kubernetes/kube-images/01-Introduction/02-threat.png" alt="image1" width="720" class="mx-auto d-block" /></p>
 
 <p>This blog will cover some of the most pertinent attack techniques affecting Kubernetes clusters in the wild. I’ll also use Falco to engineer detections and provide actionable mitigations for the attacks.</p>
 
@@ -1583,7 +1583,7 @@ etcdctl get /registry/secrets/default/my-db-credentials
 
 <p><img src="/img/kubernetes/kube-images/09-goldenticket/06-testusercreate.png" alt="image69" width="720" class="mx-auto d-block" /></p>
 
-<p><img src="/img/kubernetes/kube-images/09-goldenticket/05-spoofadm" alt="image68" width="720" class="mx-auto d-block" /></p>
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png" alt="image68" width="720" class="mx-auto d-block" /></p>
 
 <p>Kubernetes node certificates can also be forged. Any node name can be specified, including  a non-existent one.Kubernetes will treat non-existing node names  as a valid node identity.</p>
 
