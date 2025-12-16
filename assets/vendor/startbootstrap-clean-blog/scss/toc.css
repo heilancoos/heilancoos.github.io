@@ -4,18 +4,18 @@
   top: 80px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
-
   background: transparent;   /* remove gray box look */
   padding: 0.5rem 1rem;
   border-left: 2px solid #6c63ff; /* slim accent line */
   font-family: "Comic Sans MS", sans-serif;
   font-size: 0.8rem;          /* smaller text */
   line-height: 1.4;
+  margin-left: -2rem;
 }
 
 /* Title */
 .toc h5 {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.75rem;
 }
@@ -27,7 +27,20 @@
   margin-bottom: 1rem;
 }
 
+/* Top-level sections */
+.toc li.h2 > a {
+  color: #69032e;
+  font-weight: 600;
+}
+/* Subsections */
+.toc li.h3 > a { color: #721d3c; font-weight: 500; }
+.toc li.h4 > a { color: #60283c; font-weight: 200;}
+.toc li.h5 > a { color: #cf769c; }
 
+/* Remove H5 entries from TOC entirely */
+.toc li.h5 {
+  display: none;
+}
 
 /* Remove default list styles */
 .toc ul {
@@ -45,8 +58,19 @@
 .toc li.h3 {
   margin-left: 1rem;
   margin-bottom: 0.3rem;
-  font-size: 0.75rem; /* even smaller for nested headings */
+  font-size: 0.95rem; /* even smaller for nested headings */
 }
+.toc li.h4 {
+  margin-left: 1.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+.toc li.h5 {
+  margin-left: 2rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
 
 /* Links */
 .toc a {
@@ -76,4 +100,16 @@
   font-weight: 600;
   border-left: 3px solid #6c63ff;
   padding-left: 5px;
+}
+
+
+
+#introduction ~ ul > li a {
+  color: #83053a;
+  font-weight: 600;
+}
+
+#introduction ~ ul ul > li a {
+  color: #a81653;
+  font-weight: 300;
 }

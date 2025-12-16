@@ -1,0 +1,15 @@
+<nav class="toc">
+  <ul>
+    {% assign headers = include.html | split: '<h' %}
+    {% for header in headers %}
+      {% if header contains 'id="' %}
+        {% assign level = header | slice: 0, 1 %}
+        {% assign id = header | split: 'id="' | last | split: '"' | first %}
+        {% assign title = header | split: '>' | slice: 1 | first | split: '<' | first %}
+        <li class="toc-level-{{ level }}">
+          <a href="#{{ id }}">{{ title }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+</nav>

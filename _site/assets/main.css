@@ -545,6 +545,22 @@ pre {
   background: rgba(123, 89, 110, 0.85);
 }
 
+/* Make inline code the same size as body text */
+p code,
+li code,
+span code {
+  font-size: 1em;
+  letter-spacing: inherit;
+}
+
+/* Stop weird spacing in code blocks */
+pre, pre code {
+  text-align: left !important;
+  text-justify: auto;
+  word-spacing: normal;
+  letter-spacing: normal;
+}
+
 /* === ABOUT PAGE === */
 .about-hero {
   margin: 2rem 0 1rem;

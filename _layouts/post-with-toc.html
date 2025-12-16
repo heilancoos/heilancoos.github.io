@@ -73,7 +73,7 @@
       // TOC generator
       document.addEventListener("DOMContentLoaded", function () {
         const toc = document.getElementById("toc-list");
-        const headers = document.querySelectorAll(".post-body h2, .post-body h3");
+        const headers = document.querySelectorAll(".post-body h1, .post-body h2, .post-body h3, .post-body h4, .post-body h5");
         headers.forEach((header, index) => {
           if (!header.id) header.id = "section-" + index;
           const link = document.createElement("a");
