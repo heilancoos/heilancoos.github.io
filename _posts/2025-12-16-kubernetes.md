@@ -210,7 +210,9 @@ Falco loads custom detection rules from `/etc/falco/rules.d`, and Helm makes it 
 helm upgrade --namespace falco falco falcosecurity/falco -f values.yaml	
 ```
 
-All of the custom rules used throughout this blog are available in this repository: [https://github.com/heilancoos/k8s-custom-detections/tree/main](https://github.com/heilancoos/k8s-custom-detections/tree/main)
+All of the custom rules used throughout this blog are available in this repository: 
+
+[https://github.com/heilancoos/k8s-custom-detections/tree/main](https://github.com/heilancoos/k8s-custom-detections/tree/main)
 
 
 ### **Falco Sidekick**  
