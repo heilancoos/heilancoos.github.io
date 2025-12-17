@@ -25,6 +25,8 @@ html, body {
 
         > .post-img-container {
           width: 100%;
+          max-height: 160px;
+          overflow: hidden;
 
           > .post-img {
             width: 100%;
