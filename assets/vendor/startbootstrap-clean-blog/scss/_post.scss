@@ -13,8 +13,9 @@
     }
     @media only screen and (max-width: 767px){
       >.post-container{
-        display: block !important;
-        text-align: center;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
         >.post-text {
           padding-top: 30px !important;
         }
