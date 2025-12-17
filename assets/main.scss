@@ -5,3 +5,14 @@
 @import "styles";
 
 @import url('https://fonts.googleapis.com/css?family=Abel|Dosis|Source+Code+Pro|Roboto+Slab:100|Source+Code+Pro|Source+Sans+Pro:200|Unica+One|Josefin+Sans:300|Nothing+You+Could+Do');
+
+/* ===== MOBILE FONT OVERRIDES ===== */
+@media (max-width: 768px) {
+  header.masthead .post-heading h1,
+  header.masthead .post-heading .meta,
+  body,
+  p,
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Comic Sans MS", "Comic Sans", cursive !important;
+  }
+}
