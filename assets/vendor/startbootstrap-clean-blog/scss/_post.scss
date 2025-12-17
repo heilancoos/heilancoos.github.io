@@ -12,15 +12,29 @@
       text-decoration: none;
     }
     @media only screen and (max-width: 767px){
-      >.post-container{
-        display: flex !important;
-        flex-direction: column;
-        align-items: center;
-        >.post-text {
-          padding-top: 30px !important;
+    > .post-container {
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+
+      > .post-img-container {
+        width: 100%;
+
+        > .post-img {
+          width: 100%;
+          height: auto;
+          max-height: none;
+          object-fit: contain;
         }
       }
+
+      > .post-text {
+        padding-top: 30px !important;
+        width: 100%;
+        text-align: left;
+      }
     }
+  }
     > .post-container{
       display: flex;
       > .post-img-container{
