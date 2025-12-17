@@ -1,9 +1,9 @@
 ---
 title: "A Brief Deep-Dive into Attacking and Defending Kubernetes"
 layout: post-with-toc
-background: '/img/kubernetes/thumbnail.png'
+background: '/img/kubernetes/kube-images/01-Introduction/01-controlplane.png'
 subtitle: "What attackers do in Kubernetes and how to catch them."
-image: 'https://heilancoos.github.io/img/kms-ransomware/kms-ransomware-diagram.png'
+image: 'img/kubernetes/kube-images/01-Introduction/01-controlplane.png'
 excerpt: "What attackers do in Kubernetes—and how to catch them."  # <-- used for description/meta
 tags: [research, cloud, containers, security]
 categories: [research]
