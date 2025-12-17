@@ -1675,6 +1675,6 @@ Kubernetes has matured into one of the most widely adopted container orchestrati
 
 Over the past several years, a wide collection of open-source tools have emerged to help organizations harden their clusters and test for misconfigurations. Tools exist such as `kube-bench`, which focuses on ensuring compliance with the CIS Kubernetes Benchmark. There are also tools that focus on demonstrating the attack paths a threat actor could take in a cluster like [`IceKube`](https://github.com/ReversecLabs/IceKube) and `KubeHound`. 
 
-If you would like to read more about this topic, I highly recommend taking a look at [Rory McCune’s](https://raesene.github.io/) or [Graham Helton’s](https://grahamhelton.com/) blogs.
+If you would like to read more about this topic, I highly recommend taking a look at [Rory McCune’s](https://raesene.github.io/) or [Graham Helton’s](https://grahamhelton.com/) blogs. Their work on Kubernetes security was invaluable when I was writing this blog.
 
 
