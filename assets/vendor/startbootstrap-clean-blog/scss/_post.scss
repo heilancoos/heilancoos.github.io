@@ -42,7 +42,7 @@
           }
           > .post-meta {
             display: none;
-            font-family: 'Comic Sans MS';
+            font-family: 'Consolas';
             font-size: 14px;
             margin: 10px 0 0;
             color: $gray-900;
@@ -88,6 +88,7 @@
               border: 2px solid #CC4466;
               padding: 10px 20px;
               margin-right: 50px;
+              font-family: 'Comic Sans MS';
             }
             > .post-meta{
               display: inline;
