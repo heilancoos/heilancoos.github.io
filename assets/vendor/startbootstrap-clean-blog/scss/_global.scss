@@ -76,3 +76,9 @@ img::-moz-selection {
   color: $white;
   background: transparent;
 }
+
+@media (max-width: 767px) {
+  body {
+    font-family: 'Comic Sans MS', serif;
+  }
+}
