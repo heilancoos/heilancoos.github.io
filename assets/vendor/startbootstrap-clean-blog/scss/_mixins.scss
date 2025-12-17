@@ -66,11 +66,3 @@
 @mixin sans-serif-font() {
   font-family: 'Comic Sans MS', sans-serif;
 }
-/* Mobile: force Comic Sans in hero title */
-@media (max-width: 768px) {
-  header.masthead .post-heading h1 {
-    font-family: "Comic Sans MS", "Comic Sans", cursive !important;
-    letter-spacing: -1px;   /* undo aggressive desktop tracking */
-    line-height: 1.2;       /* undo line squashing */
-  }
-}
