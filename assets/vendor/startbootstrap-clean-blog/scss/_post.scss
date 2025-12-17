@@ -19,20 +19,20 @@ html, body {
     }
     @media only screen and (max-width: 767px){
       > .post-container {
-        display: flex !important;
-        flex-direction: column;
-        align-items: center;
+        display: flex;
+        flex-direction: row;
+        gap: 0.75rem;
 
         > .post-img-container {
-          width: 100%;
-          max-height: 160px;
+          width: 90px;
+          height: 90px;
           overflow: hidden;
+          border-radius: 6px;
 
           > .post-img {
             width: 100%;
-            height: auto;
-            max-height: none;
-            object-fit: contain;
+            height: 100%;
+            object-fit: cover;
           }
         }
 
