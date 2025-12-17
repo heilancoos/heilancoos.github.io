@@ -1,9 +1,10 @@
-@import url("https://fonts.googleapis.com/css?family=Abel|Dosis|Source+Code+Pro|Roboto+Slab:100|Source+Code+Pro|Source+Sans+Pro:200|Unica+One|Josefin+Sans:300|Nothing+You+Could+Do");
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css?family=Abel|Dosis|Source+Code+Pro|Roboto+Slab:100|Source+Code+Pro|Source+Sans+Pro:200|Unica+One|Josefin+Sans:300|Nothing+You+Could+Do|Comic+Neue:300,400,700");
 body {
   background-color: rgba(255, 233, 237, 0.769);
   font-size: 16px;
   color: rgb(36, 33, 35);
-  font-family: "Comic Sans MS", serif;
+  font-family: "Comic Sans MS", "Comic Neue", serif;
 }
 
 p {
@@ -21,7 +22,7 @@ h4,
 h5,
 h6 {
   font-weight: 800;
-  font-family: "Comic Sans MS", sans-serif;
+  font-family: "Comic Sans MS", "Comic Neue", sans-serif;
 }
 
 a {
@@ -78,10 +79,15 @@ img::-moz-selection {
   background: transparent;
 }
 
+@media (max-width: 767px) {
+  body {
+    font-family: "Comic Sans MS", serif;
+  }
+}
 #mainNav {
   position: absolute;
   background-color: black;
-  font-family: "Comic Sans MS", sans-serif;
+  font-family: "Comic Sans MS", "Comic Neue", sans-serif;
 }
 #mainNav .navbar-brand {
   font-weight: 800;
@@ -247,14 +253,14 @@ header.masthead .post-heading .subheading {
   font-size: 24px;
   font-weight: 300;
   margin: 10px 0 30px;
-  font-family: "Comic Sans MS", sans-serif;
+  font-family: "Comic Sans MS", "Comic Neue", sans-serif;
   font-family: "Nothing You Could Do", cursive;
 }
 header.masthead .post-heading .meta {
   font-size: 20px;
   font-weight: 300;
   font-style: italic;
-  font-family: "Comic Sans MS", serif;
+  font-family: "Comic Sans MS", "Comic Neue", serif;
 }
 header.masthead .post-heading .meta a {
   color: #fff;
@@ -344,6 +350,7 @@ header.masthead .post-heading .meta a {
     border: 2px solid #CC4466;
     padding: 10px 20px;
     margin-right: 50px;
+    font-family: "Comic Sans MS";
   }
   .post-preview > a > .post-container > .post-text > .post-text-header > .post-meta {
     display: inline;
@@ -416,6 +423,41 @@ blockquote > p::before {
   opacity: 1;
 }
 
+/* Mobile readability fix — do NOT touch desktop */
+/* ===============================
+   MOBILE FIXES (ADDITIVE ONLY)
+   =============================== */
+@media (max-width: 768px) {
+  /* Fix justified text spacing */
+  .post-body {
+    text-align: left;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+  /* Images inside posts */
+  .post-body img {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem auto;
+    display: block;
+  }
+}
+/* Blog post images */
+.post-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5rem auto;
+}
+
+.post-body img.large {
+  max-width: 720px;
+}
+
+.post-body img.small {
+  max-width: 480px;
+}
+
 .floating-label-form-group {
   font-size: 14px;
   position: relative;
@@ -434,12 +476,12 @@ blockquote > p::before {
   border-radius: 0;
   background: none;
   box-shadow: none !important;
-  font-family: "Comic Sans MS", serif;
+  font-family: "Comic Sans MS", "Comic Neue", serif;
 }
 .floating-label-form-group input::-webkit-input-placeholder,
 .floating-label-form-group textarea::-webkit-input-placeholder {
   color: #868e96;
-  font-family: "Comic Sans MS", serif;
+  font-family: "Comic Sans MS", "Comic Neue", serif;
 }
 .floating-label-form-group label {
   font-size: 0.85em;
@@ -494,7 +536,7 @@ footer .copyright {
   letter-spacing: 1px;
   text-transform: uppercase;
   border-radius: 0;
-  font-family: "Comic Sans MS", sans-serif;
+  font-family: "Comic Sans MS", "Comic Neue", sans-serif;
 }
 
 .btn-primary {
