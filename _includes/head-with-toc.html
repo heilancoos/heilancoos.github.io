@@ -26,16 +26,18 @@
   <link rel="alternate" type="application/rss+xml" title="{{ site.title | escape }}" href="{{ "/feed.xml" | relative_url }}">
 
   <!-- Open Graph (for Discord, Facebook, LinkedIn) -->
+  {% assign share_image = page.image | default: page.background | default: '/assets/images/your-preview.jpg' %}
+
   <meta property="og:type" content="article" />
   <meta property="og:title" content="{{ page.title | escape }}" />
-  <meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}" />
+  <meta property="og:description" content="{{ page.subtitle | strip_html | truncate: 160 }}" />
   <meta property="og:url" content="{{ page.url | absolute_url }}" />
-  <meta property="og:image" content="{{ site.url }}/assets/images/your-preview.jpg" />
+  <meta property="og:image" content="{{ share_image | absolute_url }}" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="{{ page.title | escape }}" />
-  <meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}" />
-  <meta name="twitter:image" content="{{ site.url }}/assets/images/your-preview.jpg" />
+  <meta name="twitter:description" content="{{ page.subtitle | strip_html | truncate: 160 }}" />
+  <meta name="twitter:image" content="{{ share_image | absolute_url }}" />
 
 </head>
