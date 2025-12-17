@@ -195,3 +195,19 @@ blockquote>p{
   }
 }
 
+/* Blog post images */
+.post-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5rem auto;
+}
+
+.post-body img.large {
+  max-width: 720px;
+}
+
+.post-body img.small {
+  max-width: 480px;
+}
+

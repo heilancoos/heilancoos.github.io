@@ -46,7 +46,7 @@ A Kubernetes cluster at a very minimum, consists of a [master node and a control
 
 The control plane manages the entire cluster and makes global decisions about scheduling and responding to cluster events. The core components of the control plane are the API server, `ETCD` , the scheduler, and the controller manager.
 
-![image1](/img/kubernetes/kube-images/01-Introduction/01-controlplane.png){: width="720" .mx-auto .d-block }
+![image1](/img/kubernetes/kube-images/01-Introduction/01-controlplane.png) 
 
 
 The API server is the core of a Kubernetes cluster. The API server exposes an HTTP API that allows users and cluster components to communicate. Every request to the API server goes through a process of checking authentication, authorization, and admission controls, which is explained in more detail later in this blog.
@@ -138,7 +138,7 @@ Every component of Kubernetes can be made vulnerable in some way. In a misconfig
 
 Microsoft's threat matrix for Kubernetes illustrates the breadth of potential attack vectors across the MITRE ATT&CK framework. From initial access through privilege escalation to data exfiltration, every component presents potential vulnerabilities when misconfigured.
 
-![image1](/img/kubernetes/kube-images/01-Introduction/02-threat.png){: width="720" .mx-auto .d-block }
+![image1](/img/kubernetes/kube-images/01-Introduction/02-threat.png) 
   
 This blog will cover some of the most pertinent attack techniques affecting Kubernetes clusters in the wild. I'll also use Falco to engineer detections and provide actionable mitigations for the attacks.
 
@@ -161,7 +161,7 @@ kubectl exec -it $(kubectl get pods --selector=app=nginx -o name) -- cat /etc/sh
 ```
 
 Generates an alert like this:   
-![image3](/img/kubernetes/kube-images/01-Introduction/03-falco-demo.png){: width="720" .mx-auto .d-block }
+![image3](/img/kubernetes/kube-images/01-Introduction/03-falco-demo.png) 
   
 Falco rules are written in YAML and contain basic fields like `rule`, `desc`, `condition`, `output`, and `priority`. The rule for the above alert looks like this: 
 
@@ -218,7 +218,7 @@ All of the custom rules used throughout this blog are available in this reposito
 ### **Falco Sidekick**  
 
 Falco Sidekick serves as a routing engine for security alerts. When a Falco rule is triggered, Sidekick can forward these alerts to multiple third-party platforms such as Slack, Datadog, Prometheus, and more.   
-![image4](/img/kubernetes/kube-images/01-Introduction/04-falcosidekick_forwarding.png){: width="720" .mx-auto .d-block }
+![image4](/img/kubernetes/kube-images/01-Introduction/04-falcosidekick_forwarding.png) 
   
 source: [https://falco.org/docs/concepts/outputs/forwarding/](https://falco.org/docs/concepts/outputs/forwarding/) 
 
@@ -226,7 +226,7 @@ Falco Sidekick UI provides a web based dashboard where security teams can visual
 
 Example detection in Falco:
 
-![image5](/img/kubernetes/kube-images/01-Introduction/05-sidekick-alert.png){: width="720" .mx-auto .d-block }
+![image5](/img/kubernetes/kube-images/01-Introduction/05-sidekick-alert.png) 
 
 
 Falco represents a critical layer in a defense-in-depth Kubernetes security strategy, providing the runtime visibility needed to detect threats that bypass defenses.
@@ -259,7 +259,7 @@ As discussed in the [Control Plane](#the-control-plane) section, the API server 
 
 Both the API server and the kubelet API can permit anonymous requests depending on how they are configured. Any request that is not rejected by another authentication method is treated as an anonymous request with the user identity `system:anonymous` and the group membership `system:unauthenticated`. However even if anonymous authentication is allowed, the set Authorization Mode will determine what anonymous requests are allowed. 
 
-![image6](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png){: width="720" .mx-auto .d-block }
+![image6](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png) 
 
 
 #### Kubelet API  
@@ -277,7 +277,7 @@ Commands can also be executed through the `kubelet` API:
 curl -k -X POST "https://127.0.0.1:10250/run/default/nginx/nginx?cmd=ls"  
 ```
 
-![image6](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png){: width="720" .mx-auto .d-block }
+![image6](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/01-command-curl.png) 
 
 
 Alternatively, CyberArk’s `kubeletctl` provides an easy-to-use interface for interacting with kubelet’s API. It’s an incredibly powerful tool that can enumerate pod information, retrieve logs, execute commands inside containers, attach into containers, and map processes to pods.
@@ -285,7 +285,7 @@ Alternatively, CyberArk’s `kubeletctl` provides an easy-to-use interface for i
 ```bash  
 kubeletctl pods -i  
 ```  
-![image7](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/02-kubletctlgetpods.png){: width="720" .mx-auto .d-block }
+![image7](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/02-kubletctlgetpods.png) 
 
 
 With access to the API, an attacker would also be able to execute commands into containers. For example, with `kubeletctl` we are able to specify which pod and container to execute commands in:
@@ -293,7 +293,7 @@ With access to the API, an attacker would also be able to execute commands into 
 ```bash  
 kubeletctl exec "cat /etc/shadow" -p $pod -c $container-name  
 ```  
-![image8](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/03-kubletctlexecdemo.png){: width="720" .mx-auto .d-block }
+![image8](/img/kubernetes/kube-images/02-unauth-api/01-kubelet/03-kubletctlexecdemo.png) 
   
 From an attacker’s perspective, compromising `kubelet` means node-level privileges. `kubelet` can be used to laterally move into other pods or extract secrets mounted into application containers.
 
@@ -307,21 +307,21 @@ The simplest way to determine whether anonymous access is allowed is to send a r
 curl -k https://$API:16443/api  
 ```
 
-![image9](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/01-curlapi-demo.png){: width="720" .mx-auto .d-block }
+![image9](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/01-curlapi-demo.png) 
 
 
 The response code 403 Forbidden indicates that anonymous requests are allowed but RBAC is blocking access.
 
 Once you know anonymous auth is enabled, you can enumerate the API to see what data an unauthenticated user can reach. I wrote a simple [script](https://github.com/heilancoos/k8s-custom-detections/blob/main/examples/check_anonymous_k8s.py) to do this:
 
-![image10](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/02-api-enum.png){: width="720" .mx-auto .d-block }
+![image10](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/02-api-enum.png) 
 
 
 ```bash  
  curl -k [https://127.0.0.1:16443/api/v1/namespaces/default/pods](https://127.0.0.1:16443/api/v1/namespaces/default/pods)  
 ```
 
-![image11](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/03-api-pods-anon-curl.png){: width="720" .mx-auto .d-block }
+![image11](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/03-api-pods-anon-curl.png) 
 
 
 While `curl` shows what unauthenticated users can *actually* access, you can also test how RBAC would treat the anonymous user by impersonating it:
@@ -330,7 +330,7 @@ While `curl` shows what unauthenticated users can *actually* access, you can als
 kubectl auth whoami --as=system:anonymous  
 kubectl auth can-i --list --as=system:anonymous   
 ```  
-![image12](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/04-auth-can-list.png){: width="720" .mx-auto .d-block }
+![image12](/img/kubernetes/kube-images/02-unauth-api/02-apiserver/04-auth-can-list.png) 
 
 
 In the worst case scenario, if `system:anonymous` has the permissions of `cluster-admin`, an attacker would completely own the cluster. 
@@ -347,14 +347,14 @@ Set the API server flag `--anonymous-auth` to `false` in `/var/snap/microk8s/cur
 --anonymous-auth=false  
 ```  
 
-![image15](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/01-noanonapiserver.png){: width="720" .mx-auto .d-block }
+![image15](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/01-noanonapiserver.png) 
 
  The same can be done for `kubelet` in `/var/snap/microk8s/current/args/kubelet`:
 
 ```yaml  
 --anonymous-auth=false  
 ```
-![image16](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/02-nomoreanonkubelet.png){: width="720" .mx-auto .d-block }
+![image16](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/02-nomoreanonkubelet.png) 
 
 ##### Enable Client Certificate Authentication for the Kubelet API
 
@@ -374,7 +374,7 @@ In this mode, kubelet sends a `SubjectAccessReview` to the API server for each i
 
 For example, even though anonymous requests are allowed, the request is then checked against the authorization policy to determine whether it should be allowed:
 
-![image71](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/04-kubeletauth.png){: width="720" .mx-auto .d-block }
+![image71](/img/kubernetes/kube-images/02-unauth-api/03-defensivestrategies/04-kubeletauth.png) 
 
 
 
@@ -548,7 +548,7 @@ You can audit `cluster-admin` usage by tracking which subjects are bound to the 
 
 `kubectl get clusterrolebindings -o wide | grep cluster-admin`
 
-![image17](/img/kubernetes/kube-images/03-rbac/01-caaudit.png){: width="720" .mx-auto .d-block }
+![image17](/img/kubernetes/kube-images/03-rbac/01-caaudit.png) 
 
 ##### Wildcards and Verb Permissions
 Wildcard RBAC rules are typically implemented for pure convenience. But carelessly leaving them around can lead to cluster-wide takeover.
@@ -582,7 +582,7 @@ They can escalate to cluster-admin because the `escalate` permission allows the 
 
 To see how attackers use this in practice, in a honeypot analyzed by [Aqua Security Researchers](https://www.aquasec.com/blog/leveraging-kubernetes-rbac-to-backdoor-clusters/), attackers leveraged a misconfigured API server that allowed anonymous requests. They used RBAC to gain persistence by creating a privileged ClusterRole named `kube-controller` and a ServiceAccount in the `kube-system` namespace. The attacker then created a ClusterRoleBinding, binding the ClusterRole to ServiceAccount. After establishing persistence, the attacker then creates a DaemonSet to deploy containers with a cryptomining binary, effectively hijacking the resources of the cluster.
 
-![image18](/img/kubernetes/kube-images/03-rbac/02-rbac-buster.png){: width="720" .mx-auto .d-block }
+![image18](/img/kubernetes/kube-images/03-rbac/02-rbac-buster.png) 
 
 
 Let’s take a look at another example. Let’s say there is a service account in a dev namespace.
@@ -592,20 +592,20 @@ An attacker who gets command execution in a pod in that namespace, begins enumer
 ```bash  
 cat /var/run/secrets/kubernetes.io/serviceaccount/token  
 ```  
-![image19](/img/kubernetes/kube-images/03-rbac/03-obs-token.png){: width="720" .mx-auto .d-block }
+![image19](/img/kubernetes/kube-images/03-rbac/03-obs-token.png) 
 
 
 Able to authenticate as the service account, the attacker can now list secrets.
 
-![image20](/img/kubernetes/kube-images/03-rbac/04-token-whoami.png){: width="720" .mx-auto .d-block }
+![image20](/img/kubernetes/kube-images/03-rbac/04-token-whoami.png) 
 
 
-![image21](/img/kubernetes/kube-images/03-rbac/05-secrets.png){: width="720" .mx-auto .d-block }
+![image21](/img/kubernetes/kube-images/03-rbac/05-secrets.png) 
 
 
 Secrets by default are encoded with base64 and can be easily deciphered, revealing these credentials: `admin:SuperSecretPassword123!`. 
 
-![image22](/img/kubernetes/kube-images/03-rbac/06-listassa.png){: width="720" .mx-auto .d-block }
+![image22](/img/kubernetes/kube-images/03-rbac/06-listassa.png) 
 
 
 Depending on the permissions of the ServiceAccount, attackers could also patch deployments, create pods running privileged containers, create CronJobs, install backdoors, spin up cryptominers, and more.
@@ -693,7 +693,7 @@ Service accounts in Kubernetes are essentially machine identities. Service accou
 ```bash  
 kubectl get serviceaccount default -n default -o yaml  
 ```  
-![image23](/img/kubernetes/kube-images/04-serviceaccount/01-default-sa.png){: width="720" .mx-auto .d-block }
+![image23](/img/kubernetes/kube-images/04-serviceaccount/01-default-sa.png) 
 
 
 The default namespace service account has no permissions attached to it other than basic discovery commands. It is virtually harmless unless it is bound to a Role or ClusterRole.
@@ -701,7 +701,7 @@ The default namespace service account has no permissions attached to it other th
 ```bash  
 kubectl auth can-i --as system:serviceaccount:default:default --list  
 ```  
-![image24](/img/kubernetes/kube-images/04-serviceaccount/02-defaultsaperms.png){: width="720" .mx-auto .d-block }
+![image24](/img/kubernetes/kube-images/04-serviceaccount/02-defaultsaperms.png) 
 
  If an administrator were to grant a service account broad permissions then every pod in the namespace also inherits those permissions.This is especially important when you consider that many attackers are able to get initial access in a cluster through an application vulnerability which grants remote code execution on a pod.
 
@@ -718,9 +718,9 @@ TOKEN=$(kubectl exec <pod> -- cat /var/run/secrets/kubernetes.io/serviceaccount/
 echo $TOKEN | cut -d. -f2 | base64 -d | jq  
 ```
 
-![image25](/img/kubernetes/kube-images/04-serviceaccount/03-exampletoken.png){: width="720" .mx-auto .d-block }
+![image25](/img/kubernetes/kube-images/04-serviceaccount/03-exampletoken.png) 
 
-![image26](/img/kubernetes/kube-images/04-serviceaccount/04-decodedtoken.png) {: width="720" .mx-auto .d-block }
+![image26](/img/kubernetes/kube-images/04-serviceaccount/04-decodedtoken.png)  
 
 Whenever a pod starts, the kubelet mounts the service account token into the pod. Applications can then use the mounted token to authenticate with the API just like a user would with `kubectl`.
 
@@ -742,7 +742,7 @@ curl -sk \
   $API/api  
 ```
 
-![image27](/img/kubernetes/kube-images/04-serviceaccount/05-api-token-test.png){: width="720" .mx-auto .d-block }
+![image27](/img/kubernetes/kube-images/04-serviceaccount/05-api-token-test.png) 
 
 For this scenario, the service account attached to this pod has the following permissions:
 
@@ -783,12 +783,12 @@ curl -k -X POST \
 kubectl get pods
 ```  
 
-![image29](/img/kubernetes/kube-images/04-serviceaccount/07-privshell proof.png){: width="720" .mx-auto .d-block }
+![image29](/img/kubernetes/kube-images/04-serviceaccount/07-privshell proof.png) 
 
 
 With the privileged container, the attacker effectively achieves full host compromise as the privileged container has full Linux capabilities, access to the host device tree, ability to mount the host file system, load kernel modules, and read/write anywhere on the host.
 
-![image30](/img/kubernetes/kube-images/04-serviceaccount/08-privshellpod.png){: width="720" .mx-auto .d-block }
+![image30](/img/kubernetes/kube-images/04-serviceaccount/08-privshellpod.png) 
 
 
 For example, the attacker could access a kubeconfig on the host by mounting the filesystem.  
@@ -797,7 +797,7 @@ mkdir /host
 cat /host/home/heilan/.kube/config  
 ```
 
-![image31](/img/kubernetes/kube-images/04-serviceaccount/09-kubeconfigsteal.png){: width="720" .mx-auto .d-block }
+![image31](/img/kubernetes/kube-images/04-serviceaccount/09-kubeconfigsteal.png) 
 
 
  Or can also escape the container entirely
@@ -892,7 +892,7 @@ Admission controllers act as another layer of access control in Kubernetes. Afte
 
 There are two types of dynamic admission controllers: `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration`. Validating webhooks review the object and either allow or deny it. Mutating controllers have the ability to modify the object through JSON patches. For example, if a mutating webhook was configured, a pod creation request will be modified without the user’s explicit knowledge before it is deployed.
 
-![image32](/img/kubernetes/kube-images/05-mac/01-admissioncontrol.png){: width="720" .mx-auto .d-block }
+![image32](/img/kubernetes/kube-images/05-mac/01-admissioncontrol.png) 
 
 
 To list current webhooks in the cluster:
@@ -902,9 +902,9 @@ kubectl get mutatingwebhookconfigurations
 kubectl get validatingwebhookconfigurations  
 ```
 
-![image33](/img/kubernetes/kube-images/05-mac/02-getwebhook.png){: width="720" .mx-auto .d-block }
+![image33](/img/kubernetes/kube-images/05-mac/02-getwebhook.png) 
   
-![image34](/img/kubernetes/kube-images/05-mac/03-describemutating.png){: width="720" .mx-auto .d-block }
+![image34](/img/kubernetes/kube-images/05-mac/03-describemutating.png) 
 
 
 An attacker with the ability to create or modify webhooks can influence the behavior of the entire cluster from behind the scenes.
@@ -948,7 +948,7 @@ webhooks:
   sideEffects: None  
   timeoutSeconds: 10  
 ```  
-![image35](/img/kubernetes/kube-images/05-mac/04-initcontainer.png){: width="720" .mx-auto .d-block }
+![image35](/img/kubernetes/kube-images/05-mac/04-initcontainer.png) 
 
 
 This would allow the attacker’s external server to modify the spec of every single pod regardless of who created it. Even if administrators rotate credentials or delete compromised workloads, the malicious webhook would continue to modify future deployments.
@@ -1017,7 +1017,7 @@ CoreDNS is a flexible and extensible DNS server that can serve as the Kubernetes
 
 Whenever a pod needs to resolve a DNS name, it queries the DNS service. CoreDNS checks if the query matches a Kubernetes service name pattern. If it matches, CoreDNS queries the Kubernetes API to get the current service endpoints and returns the correct IP address.
 
-![image37](/img/kubernetes/kube-images/06-coredns/01-dns-test-init.png){: width="720" .mx-auto .d-block }
+![image37](/img/kubernetes/kube-images/06-coredns/01-dns-test-init.png) 
 
 
 CoreDNS uses a `Corefile` for configuration. This file is typically stored and mounted from a `ConfigMap` in the `kube-system` namespace. Tampering with the configuration of CoreDNS can redirect, spoof, or tamper with name resolution in the cluster. For example, an attacker might change an endpoint like `postgres.default.svc.cluster.local` to their own in order to capture credentials and inspect traffic then proxy traffic onward.
@@ -1030,7 +1030,7 @@ To view the current CoreDNS configuration:
 
 `kubectl get configmap coredns -n kube-system -o yaml`
 
-![image38](/img/kubernetes/kube-images/06-coredns/02-default.png){: width="720" .mx-auto .d-block }
+![image38](/img/kubernetes/kube-images/06-coredns/02-default.png) 
 
 
 An attacker could modify the ConfigMap and add rewrite rules or custom host entries. The following could be added to redirect all queries for `api.demo.svc.cluster.local` to an attacker controlled domain. 
@@ -1041,7 +1041,7 @@ An attacker could modify the ConfigMap and add rewrite rules or custom host entr
 ```bash  
 kubectl -n kube-system edit configmap coredns  
 ```  
-![image40](/img/kubernetes/kube-images/06-coredns/04-modifiedcorefile.png){: width="720" .mx-auto .d-block }
+![image40](/img/kubernetes/kube-images/06-coredns/04-modifiedcorefile.png) 
 
 
 After this is applied by restarting CoreDNS, we can see that `api.demo.svc.cluster.local` is pointing to the attacker’s IP:
@@ -1050,7 +1050,7 @@ After this is applied by restarting CoreDNS, we can see that `api.demo.svc.clust
 kubectl -n kube-system rollout restart deployment coredns  
 ```
 
-![image39](/img/kubernetes/kube-images/06-coredns/03-attacker-test.png){: width="720" .mx-auto .d-block }
+![image39](/img/kubernetes/kube-images/06-coredns/03-attacker-test.png) 
 
 
 
@@ -1146,7 +1146,7 @@ spec:
       path: /data/html  
 ```  
 In this configuration anything written to `/usr/share/nginx/html/` inside the container is stored in `/data/html` on the host.  
-![image41](/img/kubernetes/kube-images/07-wvm/01-demo.png){: width="720" .mx-auto .d-block }
+![image41](/img/kubernetes/kube-images/07-wvm/01-demo.png) 
 
 
 Kubernetes supports a variety of volume types. As of Kubernetes 1.34, many cloud-based volume types such as `awsElasticBlockStore`, `azureDisk`, `cinder`, and `azureFile` have been deprecated in favor of third party storage drivers through the Container Storage Interface (CSI) instead. That being said, there are still numerous volume types still supported. Most notably:
@@ -1197,14 +1197,14 @@ spec:
 ```
 
 With this configuration, the attacker has read and write access to the entire host filesystem. They can read sensitive files, modify system configurations, or plant malicious binaries. This is essentially a complete compromise of the host node.  
-![image42](/img/kubernetes/kube-images/07-wvm/02-root-demo.png){: width="720" .mx-auto .d-block }
+![image42](/img/kubernetes/kube-images/07-wvm/02-root-demo.png) 
 
 
 ```bash  
 kubectl exec -it root-hostpath-demo -- chroot /host sh  
 ```
 
-![image43](/img/kubernetes/kube-images/07-wvm/03-chroot.png){: width="720" .mx-auto .d-block }
+![image43](/img/kubernetes/kube-images/07-wvm/03-chroot.png) 
   
 Although, this configuration isn’t one that you would likely see in the wild. A much more likely configuration is this one:  
 ```yaml  
@@ -1232,7 +1232,7 @@ spec:
 In this setup, the pod would have access to the host’s `/var/log` directory. Daniel Sagi ([https://www.aquasec.com/blog/kubernetes-security-pod-escape-log-mounts](https://www.aquasec.com/blog/kubernetes-security-pod-escape-log-mounts)) describes how this can be abused. If an attacker creates a symlink between a log file and a sensitive file like /etc/shadow then the attacker now has the ability to read /etc/shadow. 
 
 An attacker could also create a symlink to the root folder on the host and read SSH keys or other sensitive files.  
-![image44](/img/kubernetes/kube-images/07-wvm/04-fakelog.png){: width="720" .mx-auto .d-block }
+![image44](/img/kubernetes/kube-images/07-wvm/04-fakelog.png) 
 
 
 An attacker with write access to host directories could also plant SUID binaries. They could create a binary that spawns a root shell and use that to escape the container when the binary gets executed on the host either through a cron job or other means.
@@ -1253,7 +1253,7 @@ Additionally they should be set to read only mode, although this would not preve
         name: log-volume  
         readOnly: true  
 ```  
-![image45](/img/kubernetes/kube-images/07-wvm/05-readonly.png){: width="720" .mx-auto .d-block }
+![image45](/img/kubernetes/kube-images/07-wvm/05-readonly.png) 
 
 
 To completely restrict how a pod can interact with the host filesystem the security context can be configured:
@@ -1318,7 +1318,7 @@ By default, `ETCD` listens on port 2379 on the host’s network interface and re
 
 [`https://www.shodan.io/search?query=etcd`](https://www.shodan.io/search?query=etcd)
 
-![image46](/img/kubernetes/kube-images/08-etcd/01-etcdshodan.png){: width="720" .mx-auto .d-block }
+![image46](/img/kubernetes/kube-images/08-etcd/01-etcdshodan.png) 
 
 
 When client certificate authentication is not enforced, an actor can connect to `ETCD` and perform operations. Unlike API server misconfigurations that may be limited by RBAC, direct `ETCD` access bypasses all Kubernetes authorization controls. The attacker operates at the persistence layer, beneath the API server's protective mechanisms.
@@ -1335,7 +1335,7 @@ export ETCDCTL_ENDPOINTS="https://$EXPOSED_IP:12379" \
 
 This command would attempt to read all keys under the root prefix. If it succeeds, the `ETCD` database is accessible.
 
-![image47](/img/kubernetes/kube-images/08-etcd/02-getprefixkeys.png){: width="720" .mx-auto .d-block }
+![image47](/img/kubernetes/kube-images/08-etcd/02-getprefixkeys.png) 
 
 
 For example, attackers could even extract secrets from `ETCD`:
@@ -1344,9 +1344,9 @@ For example, attackers could even extract secrets from `ETCD`:
 etcdctl get /registry/secrets --prefix --keys-only  
 etcdctl get /registry/secrets/default/my-db-credentials  
 ```  
-![image48](/img/kubernetes/kube-images/08-etcd/03-getsecretkey.png){: width="720" .mx-auto .d-block }
+![image48](/img/kubernetes/kube-images/08-etcd/03-getsecretkey.png) 
   
-![image49](/img/kubernetes/kube-images/08-etcd/04-plaintextsecret.png){: width="720" .mx-auto .d-block }
+![image49](/img/kubernetes/kube-images/08-etcd/04-plaintextsecret.png) 
 
 
 Attackers could also create a snapshot of `ETCD` to minimize their network traffic and exfiltrate data:
@@ -1366,7 +1366,7 @@ It is also possible to gain persistence using pods by manipulating the pod’s n
 
 `kubetcd` requires a pod to be already deployed for the Ghost Pod technique to work, so we’ll go ahead and create one. 
 
-![image51](/img/kubernetes/kube-images/08-etcd/06-ghostpodcreated.png){: width="720" .mx-auto .d-block }
+![image51](/img/kubernetes/kube-images/08-etcd/06-ghostpodcreated.png) 
 
 
 We can then create our ghost pod:
@@ -1375,38 +1375,38 @@ We can then create our ghost pod:
 ./kubetcd create pod ghostpod-attacker -t ghostpod –fake-ns -n ghost  
 ```
 
-![image52](/img/kubernetes/kube-images/08-etcd/07-ghostpodinject.png){: width="720" .mx-auto .d-block }
+![image52](/img/kubernetes/kube-images/08-etcd/07-ghostpodinject.png) 
 
 
 We can see that `kubectl` shows the malicious pod running in the default namespace:
 
-![image53](/img/kubernetes/kube-images/08-etcd/08-ghostpodtestget.png){: width="720" .mx-auto .d-block }
+![image53](/img/kubernetes/kube-images/08-etcd/08-ghostpodtestget.png) 
 
 
 However, the fake namespace doesn’t appear:
 
-![image54](/img/kubernetes/kube-images/08-etcd/09-nofakens.png){: width="720" .mx-auto .d-block }
+![image54](/img/kubernetes/kube-images/08-etcd/09-nofakens.png) 
 
 
 Meaning our attempts to delete the pod or the namespace will always fail.  
-![image55](/img/kubernetes/kube-images/08-etcd/10-ghostpoddeletetest.png){: width="720" .mx-auto .d-block }
+![image55](/img/kubernetes/kube-images/08-etcd/10-ghostpoddeletetest.png) 
   
-![image56](/img/kubernetes/kube-images/08-etcd/11-namespacenotfound.png){: width="720" .mx-auto .d-block }
+![image56](/img/kubernetes/kube-images/08-etcd/11-namespacenotfound.png) 
 
 
 Now lets take a look within `` `ETCD` `` directly.
 
 In the default namespace, we no longer see the malicious pod:   
-![image57](/img/kubernetes/kube-images/08-etcd/12-ghostpodetcd.png){: width="720" .mx-auto .d-block }
+![image57](/img/kubernetes/kube-images/08-etcd/12-ghostpodetcd.png) 
 
 
 But if we look in namespaces, we don’t see the malicious namespace either:  
-![image58](/img/kubernetes/kube-images/08-etcd/13-etcdnofakens.png){: width="720" .mx-auto .d-block }
+![image58](/img/kubernetes/kube-images/08-etcd/13-etcdnofakens.png) 
 
 
 We can find the malicious pod when we list all pods:
 
-![image59](/img/kubernetes/kube-images/08-etcd/14-ghostpodallpods.png){: width="720" .mx-auto .d-block }
+![image59](/img/kubernetes/kube-images/08-etcd/14-ghostpodallpods.png) 
 
 
 And only from directly through `` `ETCD` `` can we delete the pod: 
@@ -1415,7 +1415,7 @@ And only from directly through `` `ETCD` `` can we delete the pod:
 etcdctl del /registry/pods/ghost/ghostpod-attacker
 ```
 
-![image60](/img/kubernetes/kube-images/08-etcd/15-ghostpoddel.png){: width="720" .mx-auto .d-block }
+![image60](/img/kubernetes/kube-images/08-etcd/15-ghostpoddel.png) 
 
 
 #### ETCD Unauthorized Access Defensive Strategies  
@@ -1469,12 +1469,12 @@ The API server will now encrypt all new secrets. To re-encrypt existing secrets 
 ```bash  
 kubectl get secrets -A  -o json | kubectl replace -f -  
 ```  
-![image61](/img/kubernetes/kube-images/08-etcd/16-replacesecret.png){: width="720" .mx-auto .d-block }
+![image61](/img/kubernetes/kube-images/08-etcd/16-replacesecret.png) 
 
 
 Then the data is encrypted as shown below:
 
-![image62](/img/kubernetes/kube-images/08-etcd/17-encryptedsecret.png){: width="720" .mx-auto .d-block }
+![image62](/img/kubernetes/kube-images/08-etcd/17-encryptedsecret.png) 
 
 
 #### ETCD Detections with Falco
@@ -1565,12 +1565,12 @@ This technique only applies to unmanaged clusters. For cloud vendors that offer 
 
 A Certificate Authority (CA) issues cryptographic certificates that prove the identity of various components or users. Each certificate has key identity fields: the Common Name (CN) which represents the user, The Organization (O) indicates the user’s group, and the Issuer shows who signed the certificate. When the API server receives a certificate signed by its trusted CA, it uses these fields to determine the identity and permissions of the client.  
 
-![image63](/img/kubernetes/kube-images/09-goldenticket/01-Certificate.png){: width="720" .mx-auto .d-block }
+![image63](/img/kubernetes/kube-images/09-goldenticket/01-Certificate.png) 
 
 
 Kubernetes keeps the CA in plaintext on the control-plane node’s filesystem under `/etc/kubernetes/pki` or for `microk8s` in `/var/snap/microk8s/current/certs`. 
 
-![image64](/img/kubernetes/kube-images/09-goldenticket/02-cadir.png){: width="720" .mx-auto .d-block }
+![image64](/img/kubernetes/kube-images/09-goldenticket/02-cadir.png) 
   
 The primary cluster CA signs the certificates used by various components in Kubernetes and also can sign the certificates for user authentication. 
 
@@ -1588,9 +1588,9 @@ The required files for this are the `ca.crt`, `ca.key`, `sa.key` files. Once the
 ./k8s_spoofilizer.py --server https://$APISERVER:6443/ --update-uid-cache ./key_dir/   
 ```
 
-![image67](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png){: width="720" .mx-auto .d-block }
+![image67](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png) 
 
-![image66](/img/kubernetes/kube-images/09-goldenticket/03-kubeadmin.png){: width="720" .mx-auto .d-block }
+![image66](/img/kubernetes/kube-images/09-goldenticket/03-kubeadmin.png) 
   
 After this, an attacker could generate an administrative account and sign it with the stolen key. Kubernetes doesn’t throw any errors if there’s another certificate with that identity, allowing stealthy persistence. In essence, if an attacker is able to steal certificate keys, they gain the ability to impersonate any user, service account, or node.
 
@@ -1600,10 +1600,10 @@ In the same vein, with a stolen `serviceaccount.key` which signs service account
 python3 k8s_spoofilizer.py --forge-sa-token default/test-user key_dir/  
 ```  
 
-![image69](/img/kubernetes/kube-images/09-goldenticket/06-testusercreate.png){: width="720" .mx-auto .d-block }
+![image69](/img/kubernetes/kube-images/09-goldenticket/06-testusercreate.png) 
 
 
-![image68](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png){: width="720" .mx-auto .d-block }
+![image68](/img/kubernetes/kube-images/09-goldenticket/05-spoofadm.png) 
   
 Kubernetes node certificates can also be forged. Any node name can be specified, including  a non-existent one.Kubernetes will treat non-existing node names  as a valid node identity.
 
