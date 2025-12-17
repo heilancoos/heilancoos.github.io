@@ -7,7 +7,7 @@
   background: transparent;   /* remove gray box look */
   padding: 0.5rem 1rem;
   border-left: 2px solid #6c63ff; /* slim accent line */
-  font-family: "Comic Sans MS", sans-serif;
+  font-family: "Comic Sans MS", "Comic Neue", sans-serif;
   font-size: 0.8rem;          /* smaller text */
   line-height: 1.4;
   margin-left: -2rem;

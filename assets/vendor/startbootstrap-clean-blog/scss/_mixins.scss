@@ -61,8 +61,8 @@
   background-size: cover;
 }
 @mixin serif-font() {
-  font-family: 'Comic Sans MS', serif;
+  font-family: 'Comic Sans MS', 'Comic Neue', serif;
 }
 @mixin sans-serif-font() {
-  font-family: 'Comic Sans MS', sans-serif;
+  font-family: 'Comic Sans MS', 'Comic Neue', sans-serif;
 }

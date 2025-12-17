@@ -94,39 +94,3 @@ header.masthead {
     }
   }
 }
-/* ===============================
-   MOBILE MASTHEAD POLISH
-   =============================== */
-@media only screen and (max-width: 767px) {
-
-  header.masthead {
-    height: auto;                 /* stop forced cropping */
-    min-height: 360px;            /* enough room for image + text */
-    background-size: contain;     /* diagrams & wide images */
-    background-position: center top;
-  }
-
-  header.masthead .overlay {
-    opacity: 0.65;                /* better text contrast on mobile */
-  }
-
-  header.masthead
-  .page-heading,
-  header.masthead
-  .post-heading,
-  header.masthead
-  .site-heading {
-    padding: 60px 20px 80px;      /* reduce vertical bloat */
-    text-align: center;
-  }
-
-  header.masthead .post-heading h1 {
-    font-size: 1.9rem;            /* readable, not overwhelming */
-    line-height: 1.2;             /* undo line squashing */
-    letter-spacing: -1px;         /* undo desktop tight tracking */
-  }
-
-  header.masthead .post-heading .meta {
-    font-size: 0.9rem;
-  }
-}
