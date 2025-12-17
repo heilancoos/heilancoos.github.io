@@ -1,4 +1,10 @@
 // Styling for the post page
+/* Prevent mobile auto-zoom due to overflow */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 @media only screen and (max-width: 767px){
   .post-preview{
     text-align: center !important;
@@ -12,29 +18,29 @@
       text-decoration: none;
     }
     @media only screen and (max-width: 767px){
-    > .post-container {
-      display: flex !important;
-      flex-direction: column;
-      align-items: center;
+      > .post-container {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
 
-      > .post-img-container {
-        width: 100%;
-
-        > .post-img {
+        > .post-img-container {
           width: 100%;
-          height: auto;
-          max-height: none;
-          object-fit: contain;
+
+          > .post-img {
+            width: 100%;
+            height: auto;
+            max-height: none;
+            object-fit: contain;
+          }
+        }
+
+        > .post-text {
+          padding-top: 30px !important;
+          width: 100%;
+          text-align: left;
         }
       }
-
-      > .post-text {
-        padding-top: 30px !important;
-        width: 100%;
-        text-align: left;
-      }
     }
-  }
     > .post-container{
       display: flex;
       > .post-img-container{
@@ -103,7 +109,6 @@
               border: 2px solid #CC4466;
               padding: 10px 20px;
               margin-right: 50px;
-              font-family: "Comic Neue", "Comic Sans MS";
             }
             > .post-meta{
               display: inline;
