@@ -2,8 +2,8 @@ title:             Heilan Cyber
 description:       ...in the pursuit of knowledge
 author:            HC
 #url:               "localhost:4000"
-url:               "https://github.com/heilancoos/"
-baseurl:
+url:               "https://heilancoos.github.io"
+baseurl:            ""
 # Social Profiles
 github_username:   heilancoos
 linkedin_username: alexis-o
