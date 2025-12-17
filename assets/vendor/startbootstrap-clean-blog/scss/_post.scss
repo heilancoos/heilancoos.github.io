@@ -164,3 +164,34 @@ blockquote>p{
   visibility: visible;
   opacity: 1;
 }
+/* Mobile readability fix — do NOT touch desktop */
+/* ===============================
+   MOBILE FIXES (ADDITIVE ONLY)
+   =============================== */
+
+@media (max-width: 768px) {
+
+  /* Fix justified text spacing */
+  .post-body {
+    text-align: left;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+
+  /* Post title readability */
+  header.masthead .post-heading h1 {
+    font-size: 1.9rem;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+  }
+
+  /* Images inside posts */
+  .post-body img {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem auto;
+    display: block;
+  }
+}
+
