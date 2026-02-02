@@ -27,10 +27,7 @@ Responders were provided with access to an ELK instance with pre-parsed logs, ex
 
 The scope of this investigation was limited to artifacts provided within the simulation, including Entra ID sign-in and audit logs, Azure Activity Logs, Microsoft Graph telemetry, Windows host event logs, and parsed forensic outputs. Live containment actions and external infrastructure attribution were outside the scope of this analysis.
 
-## Attack Overview
-The following timeline reconstructs the attacker’s activity. Events are presented in chronological order to illustrate how the intrusion progressed from initial access to full hybrid compromise. 
 
-![alt](/img/huskycorp/timeline.png)
 ## Attack Analysis
 The following section provides an analysis of the different phases the threat actor executed, and the ramifications of such activities.
 
