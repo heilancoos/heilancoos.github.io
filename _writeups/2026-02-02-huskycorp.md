@@ -2,10 +2,10 @@
 title: "Understanding Identity Abuse in Entra ID through a Case Study (Xintra)"
 layout: post-with-toc
 background: '/img/huskycorp/oauthflow.png'
-subtitle: "Exploring the ramifications of Identity Abuse in a simulated lab."
+subtitle: "Rebuilding a Tenant Compromise Through Identity-Focused Forensics"
 image: '/img/huskycorp/oauthflow.png'
-tags: [research, cloud, containers, security]
-categories: [research]
+tags: [write-up, cloud, azure, forensics]
+categories: [write-up]
 ---
 
 ## Introduction
