@@ -161,31 +161,34 @@ PRT theft allows attackers to mint new access tokens on demand across Entra-inte
 ![alt](/img/huskycorp/ptaspy.png)
 
 ## Reconstructed Timeline
+The table below reconstructs the attacker’s activity in chronological order based on cloud and on-premises telemetry.
 
-| Time (UTC)       | Event                                                                                                    | Evidence Source                       | Notes                                    |
-| ---------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
-| 2024-04-20 21:57 | Multiple failed authentication attempts against `Ashlee`, `Lonnard`, and `lina` from IP `103.216.220.45` | Entra ID Sign-In Logs                 | Password spraying behavior               |
-| 2024-04-20 22:36 | Successful credential validation for `Lonnard@huskycorp.net`                                             | Entra ID Sign-In Logs                 | Account uses Pass-Through Authentication |
-| 2024-04-20 22:37 | Conditional Access blocks initial interactive sign-in attempts                                           | Entra ID Sign-In Logs                 | `ConditionalAccessFailed`                |
-| 2024-04-20 22:41 | Successful sign-in from IP `146.70.196.180` using user agent `azurehound/v2.1.8`                         | Entra ID Sign-In Logs                 | Indicates tenant reconnaissance tooling  |
-| 2024-04-20 22:42 | Microsoft Graph enumeration activity begins                                                              | Entra ID Audit Logs / Graph Telemetry | User, role, and application discovery    |
-| 2024-04-20 23:05 | OAuth consent phishing email sent to `Lonnard@huskycorp.net`                                             | Exchange Message Trace                | Consent request for **Calendar-Sync**    |
-| 2024-04-20 23:11 | Administrative consent granted for **Calendar-Sync**                                                     | Entra ID Audit Logs                   | Malicious service principal created      |
-| 2024-04-20 23:14 | Non-interactive Microsoft Graph access via **Calendar-Sync**                                             | Entra ID Non-Interactive Sign-In Logs | OAuth-based persistence established      |
-| 2024-04-20 23:21 | Hidden inbox rule created forwarding mail externally                                                     | Exchange Audit Logs                   | Mailbox persistence                      |
-| 2024-04-20 23:34 | Attacker added as owner of **TechDocuments** application                                                 | Entra ID Audit Logs                   | Application ownership abuse              |
-| 2024-04-20 23:47 | Federated domain `huskyhelpdesk.store` added to tenant                                                   | Entra ID Audit Logs                   | Tenant-level authentication backdoor     |
-| 2024-04-21 00:12 | Authentication via attacker-controlled federated IdP                                                     | Entra ID Sign-In Logs                 | MFA and Conditional Access bypass        |
-| 2024-04-21 01:03 | Managed identity on `HuskyVM` enumerates Azure resources                                                 | Azure Activity Logs                   | Workload identity abuse                  |
-| 2024-04-21 01:09 | Managed identity granted **Key Vault Administrator** role                                                | Azure Activity Logs                   | Privilege escalation                     |
-| 2024-04-21 01:12 | Secrets accessed and backed up from `HuskyKey` vault                                                     | Key Vault Diagnostics Logs            | Secret exfiltration                      |
-| 2024-04-21 02:04 | Internal phishing document delivered via SharePoint                                                      | SharePoint Audit Logs                 | Pivot to on-premises                     |
-| 2024-04-21 02:09 | Malicious LNK executed; DLL loaded via `rundll32.exe`                                                    | Windows Event Logs                    | Initial code execution                   |
-| 2024-04-21 02:12 | Office applications spawned; memory dumps created                                                        | Host Artifacts                        | Token harvesting                         |
-| 2024-04-21 02:31 | Lateral movement to domain controller via `wmiexec.py`                                                   | Security Logs                         | Remote command execution                 |
-| 2024-04-21 02:36 | `PTASpy.dll` injected; Primary Refresh Token extracted                                                   | Host Artifacts / AADInternals         | Hybrid identity compromise               |
-| 2024-04-21 02:41 | Windows event logs cleared on domain controller                                                          | Windows Event Logs                    | Anti-forensics                           |
-| 2024-04-21 02:44 | Unified Audit Log ingestion disrupted                                                                    | Microsoft 365 Audit Logs              | Attempted evidence suppression           |
+| Time (UTC)       | Event                                                                                                    | Notes                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| 2024-04-20 21:57 | Multiple failed authentication attempts against `Ashlee`, `Lonnard`, and `lina` from IP `103.216.220.45` | Password spraying behavior              |
+| 2024-04-20 22:22 | Conditional Access blocks initial interactive sign-in attempts                                           | `ConditionalAccessFailed`               |
+| 2024-04-20 22:36 | Sign-in from IP `146.70.196.180` using user agent `azurehound/v2.1.8` for `Lonnard@huskycorp.net`        | Indicates tenant reconnaissance tooling |
+| 2024-04-20 22:36 | Microsoft Graph enumeration activity begins                                                              | User, role, and application discovery   |
+| 2024-04-20 22:41 | OAuth consent phishing email sent to `Lonnard@huskycorp.net`                                             | Consent request for `Calendar-Sync`     |
+| 2024-04-20 22:43 | Administrative consent granted for `Calendar-Sync`                                                       | Malicious service principal created     |
+| 2024-04-20 22:50 | `Calendar-Sync` downloads several files from SharePoint                                                  | Post-compromise data access             |
+| 2024-04-20 22:57 | Hidden inbox rule created forwarding mail externally                                                     | Mailbox persistence                     |
+| 2024-04-20 23:12 | Internal phishing document delivered via SharePoint to `Lonnard@huskycorp.net`                           | Pivot to on-premises                    |
+| 2024-04-20 23:15 | Malicious LNK executed on `Husky-LP-01`; DLL loaded via `rundll32.exe`                                   | Initial code execution                  |
+| 2024-04-20 23:16 | Network Connection over port `80` to `167.71.168.227`                                                    | Beaconing activity                      |
+| 2024-04-20 23:16 | Office app processes dumped                                                                              | Token harvesting                        |
+| 2024-04-21 00:24 | Lateral movement to domain controller via `wmiexec.py`                                                   | Remote command execution                |
+| 2024-04-21 00:50 | Attacker logs in to Azure VM `HuskyVM`                                                                   | Workload identity abuse                 |
+| 2024-04-21 00:54 | Managed identity granted `Key Vault Administrator` role                                                  | Privilege escalation                    |
+| 2024-04-21 00:54 | Secrets exfiltrated from vault `HUSKYKEY`                                                                | Secret exposure                         |
+| 2024-04-21 01:11 | Attacker added as owner of `TechDocuments` application                                                   | Application ownership abuse             |
+| 2024-04-20 23:47 | Federated domain `huskyhelpdesk.store` added to tenant                                                   | Tenant-level authentication backdoor    |
+| 2024-04-21 01:33 | Compliance Search created targeting sensitive financial keywords (“salary”)                              | Data discovery                          |
+| 2024-04-21 01:38 | Storage account enumeration for account `hsdocs`                                                         | Cloud resource discovery                |
+| 2024-04-21 01:43 | Sensitive files downloadded from `hsdocs`                                                                | Data collection                         |
+| 2024-04-21 01:59 | `PTASpy.dll` injected into running process                                                               | Hybrid identity compromise              |
+| 2024-04-21 02:07 | Windows event logs cleared on domain controller                                                          | Anti-forensics                          |
+| 2024-04-22 01:37 | Unified Audit Log ingestion disrupted                                                                    | Anti-forensics                          |
 
 
 ## Closing Notes

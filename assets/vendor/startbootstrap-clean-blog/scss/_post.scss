@@ -213,7 +213,7 @@ blockquote>p{
 
 .post-body th,
 .post-body td {
-  border: 1px solid #ddd;
+  border: 1px solid #8c5882;
   padding: 0.75rem;
   text-align: left;
 }
@@ -226,11 +226,11 @@ blockquote>p{
 }
 /* Alternating table row colors */
 .post-body tbody tr:nth-child(odd) {
-  background-color: #c99abba0;  // light pink
+  background-color: #fcd0ef;  // light pink
 }
 
 .post-body tbody tr:nth-child(even) {
-  background-color: #ffb4dfb7;  // slightly darker pink
+  background-color: #ffeaf6;  // slightly darker pink
 }
 .post-body tbody tr:hover {
   background-color: #f9cfd8;

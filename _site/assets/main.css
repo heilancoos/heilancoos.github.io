@@ -466,7 +466,7 @@ blockquote > p::before {
 
 .post-body th,
 .post-body td {
-  border: 1px solid #ddd;
+  border: 1px solid #8c5882;
   padding: 0.75rem;
   text-align: left;
 }
@@ -480,11 +480,11 @@ blockquote > p::before {
 
 /* Alternating table row colors */
 .post-body tbody tr:nth-child(odd) {
-  background-color: rgba(201, 154, 187, 0.6274509804);
+  background-color: #fcd0ef;
 }
 
 .post-body tbody tr:nth-child(even) {
-  background-color: rgba(255, 180, 223, 0.7176470588);
+  background-color: #ffeaf6;
 }
 
 .post-body tbody tr:hover {

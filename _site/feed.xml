@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-02-02T12:48:00-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Understanding Identity Abuse in Entra ID through a Case Study (Xintra)</title><link href="http://localhost:4000/research/2026/02/02/huskycorp.html" rel="alternate" type="text/html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)" /><published>2026-02-02T00:00:00-06:00</published><updated>2026-02-02T00:00:00-06:00</updated><id>http://localhost:4000/research/2026/02/02/huskycorp</id><content type="html" xml:base="http://localhost:4000/research/2026/02/02/huskycorp.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-02-02T13:28:14-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Understanding Identity Abuse in Entra ID through a Case Study (Xintra)</title><link href="http://localhost:4000/research/2026/02/02/huskycorp.html" rel="alternate" type="text/html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)" /><published>2026-02-02T00:00:00-06:00</published><updated>2026-02-02T00:00:00-06:00</updated><id>http://localhost:4000/research/2026/02/02/huskycorp</id><content type="html" xml:base="http://localhost:4000/research/2026/02/02/huskycorp.html"><![CDATA[<h2 id="introduction">Introduction</h2>
 <p>This is my write-up of an investigation I conducted while working through Xintra’s HuskyCorp incident simulation lab, along with what I learned throughout the process. The investigation revealed a hybrid end-to-end compromise and showed how an attacker can abuse identity in Entra ID in a variety of ways in order to escalate their privileges, maintain persistence, and effectively take over a tenant. By the end of the incident, the attacker gained administrative privileges within Entra, the on-premises Active Directory domain, and sensitive company information.</p>
 
 <h2 id="executive-summary">Executive Summary</h2>
@@ -148,13 +148,13 @@
 <img src="/img/huskycorp/ptaspy.png" alt="alt" /></p>
 
 <h2 id="reconstructed-timeline">Reconstructed Timeline</h2>
+<p>The table below reconstructs the attacker’s activity in chronological order based on cloud and on-premises telemetry.</p>
 
 <table>
   <thead>
     <tr>
       <th>Time (UTC)</th>
       <th>Event</th>
-      <th>Evidence Source</th>
       <th>Notes</th>
     </tr>
   </thead>
@@ -162,134 +162,122 @@
     <tr>
       <td>2024-04-20 21:57</td>
       <td>Multiple failed authentication attempts against <code class="language-plaintext highlighter-rouge">Ashlee</code>, <code class="language-plaintext highlighter-rouge">Lonnard</code>, and <code class="language-plaintext highlighter-rouge">lina</code> from IP <code class="language-plaintext highlighter-rouge">103.216.220.45</code></td>
-      <td>Entra ID Sign-In Logs</td>
       <td>Password spraying behavior</td>
     </tr>
     <tr>
-      <td>2024-04-20 22:36</td>
-      <td>Successful credential validation for <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
-      <td>Entra ID Sign-In Logs</td>
-      <td>Account uses Pass-Through Authentication</td>
-    </tr>
-    <tr>
-      <td>2024-04-20 22:37</td>
+      <td>2024-04-20 22:22</td>
       <td>Conditional Access blocks initial interactive sign-in attempts</td>
-      <td>Entra ID Sign-In Logs</td>
       <td><code class="language-plaintext highlighter-rouge">ConditionalAccessFailed</code></td>
     </tr>
     <tr>
-      <td>2024-04-20 22:41</td>
-      <td>Successful sign-in from IP <code class="language-plaintext highlighter-rouge">146.70.196.180</code> using user agent <code class="language-plaintext highlighter-rouge">azurehound/v2.1.8</code></td>
-      <td>Entra ID Sign-In Logs</td>
+      <td>2024-04-20 22:36</td>
+      <td>Sign-in from IP <code class="language-plaintext highlighter-rouge">146.70.196.180</code> using user agent <code class="language-plaintext highlighter-rouge">azurehound/v2.1.8</code> for <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
       <td>Indicates tenant reconnaissance tooling</td>
     </tr>
     <tr>
-      <td>2024-04-20 22:42</td>
+      <td>2024-04-20 22:36</td>
       <td>Microsoft Graph enumeration activity begins</td>
-      <td>Entra ID Audit Logs / Graph Telemetry</td>
       <td>User, role, and application discovery</td>
     </tr>
     <tr>
-      <td>2024-04-20 23:05</td>
+      <td>2024-04-20 22:41</td>
       <td>OAuth consent phishing email sent to <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
-      <td>Exchange Message Trace</td>
-      <td>Consent request for <strong>Calendar-Sync</strong></td>
+      <td>Consent request for <code class="language-plaintext highlighter-rouge">Calendar-Sync</code></td>
     </tr>
     <tr>
-      <td>2024-04-20 23:11</td>
-      <td>Administrative consent granted for <strong>Calendar-Sync</strong></td>
-      <td>Entra ID Audit Logs</td>
+      <td>2024-04-20 22:43</td>
+      <td>Administrative consent granted for <code class="language-plaintext highlighter-rouge">Calendar-Sync</code></td>
       <td>Malicious service principal created</td>
     </tr>
     <tr>
-      <td>2024-04-20 23:14</td>
-      <td>Non-interactive Microsoft Graph access via <strong>Calendar-Sync</strong></td>
-      <td>Entra ID Non-Interactive Sign-In Logs</td>
-      <td>OAuth-based persistence established</td>
+      <td>2024-04-20 22:50</td>
+      <td><code class="language-plaintext highlighter-rouge">Calendar-Sync</code> downloads several files from SharePoint</td>
+      <td>Post-compromise data access</td>
     </tr>
     <tr>
-      <td>2024-04-20 23:21</td>
+      <td>2024-04-20 22:57</td>
       <td>Hidden inbox rule created forwarding mail externally</td>
-      <td>Exchange Audit Logs</td>
       <td>Mailbox persistence</td>
     </tr>
     <tr>
-      <td>2024-04-20 23:34</td>
-      <td>Attacker added as owner of <strong>TechDocuments</strong> application</td>
-      <td>Entra ID Audit Logs</td>
+      <td>2024-04-20 23:12</td>
+      <td>Internal phishing document delivered via SharePoint to <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
+      <td>Pivot to on-premises</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:15</td>
+      <td>Malicious LNK executed on <code class="language-plaintext highlighter-rouge">Husky-LP-01</code>; DLL loaded via <code class="language-plaintext highlighter-rouge">rundll32.exe</code></td>
+      <td>Initial code execution</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:16</td>
+      <td>Network Connection over port <code class="language-plaintext highlighter-rouge">80</code> to <code class="language-plaintext highlighter-rouge">167.71.168.227</code></td>
+      <td>Beaconing activity</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:16</td>
+      <td>Office app processes dumped</td>
+      <td>Token harvesting</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 00:24</td>
+      <td>Lateral movement to domain controller via <code class="language-plaintext highlighter-rouge">wmiexec.py</code></td>
+      <td>Remote command execution</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 00:50</td>
+      <td>Attacker logs in to Azure VM <code class="language-plaintext highlighter-rouge">HuskyVM</code></td>
+      <td>Workload identity abuse</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 00:54</td>
+      <td>Managed identity granted <code class="language-plaintext highlighter-rouge">Key Vault Administrator</code> role</td>
+      <td>Privilege escalation</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 00:54</td>
+      <td>Secrets exfiltrated from vault <code class="language-plaintext highlighter-rouge">HUSKYKEY</code></td>
+      <td>Secret exposure</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 01:11</td>
+      <td>Attacker added as owner of <code class="language-plaintext highlighter-rouge">TechDocuments</code> application</td>
       <td>Application ownership abuse</td>
     </tr>
     <tr>
       <td>2024-04-20 23:47</td>
       <td>Federated domain <code class="language-plaintext highlighter-rouge">huskyhelpdesk.store</code> added to tenant</td>
-      <td>Entra ID Audit Logs</td>
       <td>Tenant-level authentication backdoor</td>
     </tr>
     <tr>
-      <td>2024-04-21 00:12</td>
-      <td>Authentication via attacker-controlled federated IdP</td>
-      <td>Entra ID Sign-In Logs</td>
-      <td>MFA and Conditional Access bypass</td>
+      <td>2024-04-21 01:33</td>
+      <td>Compliance Search created targeting sensitive financial keywords (“salary”)</td>
+      <td>Data discovery</td>
     </tr>
     <tr>
-      <td>2024-04-21 01:03</td>
-      <td>Managed identity on <code class="language-plaintext highlighter-rouge">HuskyVM</code> enumerates Azure resources</td>
-      <td>Azure Activity Logs</td>
-      <td>Workload identity abuse</td>
+      <td>2024-04-21 01:38</td>
+      <td>Storage account enumeration for account <code class="language-plaintext highlighter-rouge">hsdocs</code></td>
+      <td>Cloud resource discovery</td>
     </tr>
     <tr>
-      <td>2024-04-21 01:09</td>
-      <td>Managed identity granted <strong>Key Vault Administrator</strong> role</td>
-      <td>Azure Activity Logs</td>
-      <td>Privilege escalation</td>
+      <td>2024-04-21 01:43</td>
+      <td>Sensitive files downloadded from <code class="language-plaintext highlighter-rouge">hsdocs</code></td>
+      <td>Data collection</td>
     </tr>
     <tr>
-      <td>2024-04-21 01:12</td>
-      <td>Secrets accessed and backed up from <code class="language-plaintext highlighter-rouge">HuskyKey</code> vault</td>
-      <td>Key Vault Diagnostics Logs</td>
-      <td>Secret exfiltration</td>
-    </tr>
-    <tr>
-      <td>2024-04-21 02:04</td>
-      <td>Internal phishing document delivered via SharePoint</td>
-      <td>SharePoint Audit Logs</td>
-      <td>Pivot to on-premises</td>
-    </tr>
-    <tr>
-      <td>2024-04-21 02:09</td>
-      <td>Malicious LNK executed; DLL loaded via <code class="language-plaintext highlighter-rouge">rundll32.exe</code></td>
-      <td>Windows Event Logs</td>
-      <td>Initial code execution</td>
-    </tr>
-    <tr>
-      <td>2024-04-21 02:12</td>
-      <td>Office applications spawned; memory dumps created</td>
-      <td>Host Artifacts</td>
-      <td>Token harvesting</td>
-    </tr>
-    <tr>
-      <td>2024-04-21 02:31</td>
-      <td>Lateral movement to domain controller via <code class="language-plaintext highlighter-rouge">wmiexec.py</code></td>
-      <td>Security Logs</td>
-      <td>Remote command execution</td>
-    </tr>
-    <tr>
-      <td>2024-04-21 02:36</td>
-      <td><code class="language-plaintext highlighter-rouge">PTASpy.dll</code> injected; Primary Refresh Token extracted</td>
-      <td>Host Artifacts / AADInternals</td>
+      <td>2024-04-21 01:59</td>
+      <td><code class="language-plaintext highlighter-rouge">PTASpy.dll</code> injected into running process</td>
       <td>Hybrid identity compromise</td>
     </tr>
     <tr>
-      <td>2024-04-21 02:41</td>
+      <td>2024-04-21 02:07</td>
       <td>Windows event logs cleared on domain controller</td>
-      <td>Windows Event Logs</td>
       <td>Anti-forensics</td>
     </tr>
     <tr>
-      <td>2024-04-21 02:44</td>
+      <td>2024-04-22 01:37</td>
       <td>Unified Audit Log ingestion disrupted</td>
-      <td>Microsoft 365 Audit Logs</td>
-      <td>Attempted evidence suppression</td>
+      <td>Anti-forensics</td>
     </tr>
   </tbody>
 </table>
