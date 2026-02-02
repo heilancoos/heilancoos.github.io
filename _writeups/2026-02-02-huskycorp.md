@@ -187,7 +187,5 @@ The table below reconstructs the attacker’s activity in chronological order ba
 | 2024-04-21 02:07 | Windows event logs cleared on domain controller                                                          | Anti-forensics                          |
 | 2024-04-22 01:37 | Unified Audit Log ingestion disrupted                                                                    | Anti-forensics                          |
 
-
-
 ## Closing Notes
 This incident demonstrates that modern attackers increasingly target identity rather than just exploiting traditional software vulnerabilities. Defending against these threats requires treating identity as a primary security boundary and implementing controls that limit persistence, visibility gaps, and privilege escalation across both cloud and on-premises environments.
