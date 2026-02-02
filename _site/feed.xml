@@ -1,4 +1,301 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-12-17T16:31:52-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">A Brief Deep-Dive into Attacking and Defending Kubernetes</title><link href="http://localhost:4000/research/2025/12/16/kubernetes.html" rel="alternate" type="text/html" title="A Brief Deep-Dive into Attacking and Defending Kubernetes" /><published>2025-12-16T00:00:00-06:00</published><updated>2025-12-16T00:00:00-06:00</updated><id>http://localhost:4000/research/2025/12/16/kubernetes</id><content type="html" xml:base="http://localhost:4000/research/2025/12/16/kubernetes.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-02-02T12:48:00-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Understanding Identity Abuse in Entra ID through a Case Study (Xintra)</title><link href="http://localhost:4000/research/2026/02/02/huskycorp.html" rel="alternate" type="text/html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)" /><published>2026-02-02T00:00:00-06:00</published><updated>2026-02-02T00:00:00-06:00</updated><id>http://localhost:4000/research/2026/02/02/huskycorp</id><content type="html" xml:base="http://localhost:4000/research/2026/02/02/huskycorp.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<p>This is my write-up of an investigation I conducted while working through Xintra’s HuskyCorp incident simulation lab, along with what I learned throughout the process. The investigation revealed a hybrid end-to-end compromise and showed how an attacker can abuse identity in Entra ID in a variety of ways in order to escalate their privileges, maintain persistence, and effectively take over a tenant. By the end of the incident, the attacker gained administrative privileges within Entra, the on-premises Active Directory domain, and sensitive company information.</p>
+
+<h2 id="executive-summary">Executive Summary</h2>
+<p>In late April 2024, Husky Corp triggered an incident response investigation after discovering suspicpious user activity within their Azure tenant. The investigation revealed that a threat actor was able to to gain control over several identities, applications, and workstations. The threat actor was also able to successfully access sensitive business information.</p>
+
+<p>Based on the tactics, techniques, and procedures observed, the activity aligns closely with publicly reported Midnight Blizzard (APT 29) tradecraft. These operations are commonly associated with intelligence collection and long-term access rather than disruptive activity.</p>
+
+<p>This case study analyzes how a threat actor like Midnight Blizzard leverages identity mechanisms within Entra ID to maintain persistence and escalate their privileges.</p>
+
+<h2 id="environment--scope">Environment &amp; Scope</h2>
+<p>Husky Corp’s environment consists of an Azure tenant integrated with Entra ID with various Azure resources and an on-premises Active Directory forest.</p>
+
+<p><img src="/img/huskycorp/network-diagram.png" alt="image1" /></p>
+
+<p>Responders were provided with access to an ELK instance with pre-parsed logs, exported email artifacts, parsed browser outputs, and parsed KAPE outputs.</p>
+
+<p>The scope of this investigation was limited to artifacts provided within the simulation, including Entra ID sign-in and audit logs, Azure Activity Logs, Microsoft Graph telemetry, Windows host event logs, and parsed forensic outputs. Live containment actions and external infrastructure attribution were outside the scope of this analysis.</p>
+
+<h2 id="attack-overview">Attack Overview</h2>
+<p>The following timeline reconstructs the attacker’s activity. Events are presented in chronological order to illustrate how the intrusion progressed from initial access to full hybrid compromise.</p>
+
+<p><img src="/img/huskycorp/timeline.png" alt="alt" /></p>
+<h2 id="attack-analysis">Attack Analysis</h2>
+<p>The following section provides an analysis of the different phases the threat actor executed, and the ramifications of such activities.</p>
+
+<h3 id="initial-detection">Initial Detection</h3>
+<p>The incident began on April 20th, 2024  with multiple failed login attempts for the users <code class="language-plaintext highlighter-rouge">Ashlee@huskycorp.net</code>, <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code>, and <code class="language-plaintext highlighter-rouge">lina@huskycorporation.onmicrosoft.com</code> all from the IP: <code class="language-plaintext highlighter-rouge">103.216.220.45</code>. The failures were recorded with the error <code class="language-plaintext highlighter-rouge">InvalidUserNameOrPassword</code>, indicating an attempt at password spraying. Tools such as <a href="https://github.com/dafthack/MSOLSpray">MSOLSpray</a> are typically used to password spray Entra ID. The result of using such a tool is the influx of failed login attempts seen in the audit logs. This tool in particular takes note of the error codes returned from a failed login attempt, meaning that in instances where the credentials are correct but some other factor is blocking a successful login, the threat actor can use that information to adapt their approach.</p>
+
+<p><img src="/img/huskycorp/password-spraying.png" alt="image2" /></p>
+
+<p>This activity warranted further investigation into whether any credentials had been successfully validated.</p>
+
+<h3 id="identity-compromise">Identity Compromise</h3>
+<h4 id="credential-validation">Credential Validation</h4>
+<p>Analysis of Entra ID sign-in logs show that the attacker was able to successfuly validate the credentials for two users: <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code> and <code class="language-plaintext highlighter-rouge">Ashlee@huskycorp.net</code>. Both Ashlee and Lonnard were using Pass-Through-Authentication, meaning that these users’ passwords are validated through an on-premises agent rather than authenticated through the cloud.</p>
+
+<p><img src="/img/huskycorp/conditionalaccesspta.png" alt="image3" /></p>
+
+<h5 id="conditional-access-behavior">Conditional Access Behavior</h5>
+<p>Although the attacker was able to obtain the credentials for Lonnard’s and Ashlee’s accounts, the login attempt is blocked by the Conditional Access policies.</p>
+
+<p><img src="/img/huskycorp/conditionaccessfailure.png" alt="image4" /></p>
+
+<p>However, Conditional Access controls did not fully stop the threat actor. Subsequent successful sign-ins for <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code> were observed originating from a different IP address (<code class="language-plaintext highlighter-rouge">146.70.196.180</code>), suggesting the attacker adapted infrastructure to bypass Conditional Access policies.</p>
+
+<p><img src="/img/huskycorp/lonnardsignin.png" alt="image5" /></p>
+
+<h4 id="token-based-access-and-tenant-enumeration">Token-Based Access and Tenant Enumeration</h4>
+<p>Following successful authentication as <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code>, sign-in activity was observed with the user agent <code class="language-plaintext highlighter-rouge">azurehound/v2.1.8</code>. <a href="https://unit42.paloaltonetworks.com/threat-actor-misuse-of-azurehound/">AzureHound</a> is a Microsoft Graph enumeration tool commonly used to map identity relationships, role assignments, and application permissions within Entra ID. Audit logs confirmed that shortly after this authentication event, the attacker initiated multiple Microsoft Graph API requests targeting directory objects, applications, and role assignments.</p>
+
+<p><img src="/img/huskycorp/graphapirecon.png" alt="image6" /></p>
+
+<h3 id="persistence-mechanisms-and-data-exfiltration">Persistence Mechanisms and Data Exfiltration</h3>
+<p>After the attacker’s initial reconnaissance, they focused on establishing persistence within Entra ID using cloud-native mechanisms. These techniques allowed the threat actor to maintain access without solely relying on credentials while also reducing the effectiveness of remediation actions like password resets or MFA enforcement.</p>
+
+<h4 id="oauth-abuse">OAuth Abuse</h4>
+<p>An OAuth application in Azure authorizes software to access resources on behalf of a user without the need for a password. Attackers commonly use social engineering in order to trick legitimate users into authorizing a malicious app as a form of persistence. A typical attack flow looks like this:</p>
+
+<p><img src="/img/huskycorp/oauthflow.png" alt="image8.5" /></p>
+
+<p>In this incident, the threat actor used a phishing email targeting <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code> to obtain OAuth consent for a malicious application named <code class="language-plaintext highlighter-rouge">Calendar-Sync</code>. The email directed the user to an OAuth authorization endpoint requesting delegated Microsoft Graph permissions.</p>
+
+<p><img src="/img/huskycorp/calendar-syncemail.png" alt="image7" /></p>
+
+<p>The initial consent attempt was blocked by Microsoft security controls. This failure triggered an admin consent workflow, meaning a pending approval request was generated. An admin user ended up approving the consent request, adding <code class="language-plaintext highlighter-rouge">Calendar-Sync</code> as a service principal in the tenant.</p>
+
+<p><img src="/img/huskycorp/calendar-syncadded.png" alt="image8" /></p>
+
+<p>Once consent was granted, Entra ID issued refresh tokens to the application when <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code> authenticated.</p>
+
+<p><img src="/img/huskycorp/calendarsyncsignin.png" alt="image9" /></p>
+
+<p>After persistence was established, the attacker then used this access to exfiltrate sensitive business information, downloading several files from SharePoint.</p>
+
+<p><img src="/img/huskycorp/calendarsyncgraphapi.png" alt="image10" /></p>
+
+<p><img src="/img/huskycorp/filedownloaded.png" alt="image11" /></p>
+
+<h4 id="inbox-rules">Inbox Rules</h4>
+<p>Using the privileges gained through <code class="language-plaintext highlighter-rouge">Calendar-Sync</code>, the attacker created a hidden inbox rule within <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code>’s mailbox. The rule silently forwards emails containing the term “shareholder report” to an external ProtonMail address controlled by the attacker.</p>
+
+<p><img src="/img/huskycorp/messagerulesgraphapi.png" alt="image12" />
+<img src="/img/huskycorp/inboxrule.png" alt="image13" /></p>
+
+<p>Hidden inbox rules is a common Business Email Compromise (BEC) technique that allows attackers to stealthily exfiltrate data over time.</p>
+
+<h4 id="application-ownership-abuse">Application Ownership Abuse</h4>
+<p>Using credentials for the user <code class="language-plaintext highlighter-rouge">Ashlee@huskycorp.net</code>, previously obtained during the initial password spray, the attacker modified ownership and credentials for an existing Entra ID application named <code class="language-plaintext highlighter-rouge">TechDocuments</code>. The attacker added the compromised user as an application owner and created a new client secret for the application.</p>
+
+<p><img src="/img/huskycorp/techdocumentsapplication.png" alt="image14" /></p>
+
+<p>This technique allows attackers to authenticate as the application itself.</p>
+
+<p><img src="/img/huskycorp/techdocumentsignin.png" alt="image15" /></p>
+
+<h4 id="federated-domain-backdoor">Federated Domain Backdoor</h4>
+<p>The threat actor added a new federated domain, <code class="language-plaintext highlighter-rouge">huskyhelpdesk.store</code>, to the tenant. The domain was configured with a malicious issuer URI, enabling token issuance from an attacker-controlled identity provider.</p>
+
+<p><img src="/img/huskycorp/federateddomain.png" alt="image16" /></p>
+
+<p>By adding a federated domain, the attacker can redirect the authentication flow so that authentication is performed by the new federated domain rather than directly by the tenant itself. This means that the threat actor is able to impersonate any user without their credentials and bypassing MFA.</p>
+
+<p><img src="/img/huskycorp/federatedbackdoor.png" alt="fed" /></p>
+
+<h3 id="privilege-esclation">Privilege Esclation</h3>
+
+<h4 id="managed-identity-abuse">Managed Identity Abuse</h4>
+<p>The threat actor authenticated to the Azure virtual machine <code class="language-plaintext highlighter-rouge">HuskyVM</code> and leveraged the VM’s managed identity to access Azure resources. The attacker identified a Key Vault named <code class="language-plaintext highlighter-rouge">HuskyKey</code>. The attacker then assigned the <code class="language-plaintext highlighter-rouge">Key Vault Administrator</code> role to the managed identity at the Key Vault scope, effectively granting full control over secret management.</p>
+
+<p><img src="/img/huskycorp/createroleassignment.png" alt="img" /></p>
+
+<h4 id="key-vault-access">Key Vault Access</h4>
+<p>With administrative access to the Key Vault, the attacker listed available secrets and retrieved the value of a sensitive secret named <code class="language-plaintext highlighter-rouge">SecretKey</code>.
+<img src="/img/huskycorp/keyvaultaccess.png" alt="alt text" /></p>
+
+<h3 id="on-prem-compromise">On-Prem Compromise</h3>
+<p>After establishing control within the cloud identity plane, the attacker pivoted into the on-premises environment.</p>
+<h4 id="internal-phish">Internal Phish</h4>
+<p>The attacker initiated an internal phishing campaign by uploading a malicious document to SharePoint and distributing it to <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code>. The email impersonated executive communications and prompted the user to open an attached archive file.</p>
+
+<p><img src="/img/huskycorp/internalphish.png" alt="alt" /></p>
+
+<p>The archive contained an ISO image with a malicious DLL and a shortcut file. When executed, the shortcut spawned <code class="language-plaintext highlighter-rouge">cmd.exe</code> and used <code class="language-plaintext highlighter-rouge">rundll32.exe</code> to trigger execution of the malicious DLL.</p>
+
+<p><img src="/img/huskycorp/lecmd.png" alt="alt" /></p>
+
+<h4 id="dll-execution-and-credential-access">DLL Execution and Credential Access</h4>
+<p>Following execution, the malicious DLL initiated outbound network connections over port <code class="language-plaintext highlighter-rouge">80</code> to a malicious IP and started local Office applications.</p>
+
+<p><img src="/img/huskycorp/officestarted.png" alt="img" /></p>
+
+<p>Because Office applications automatically authenticate to Entra ID, access and refresh tokens were present in memory. The attacker dumped memory from these processes, producing <code class="language-plaintext highlighter-rouge">.dmp</code> files containing authentication artifacts. This technique enabled the attacker to extract tokens without needing to capture credentials directly, reducing reliance on password-based access.</p>
+
+<p><img src="/img/huskycorp/officedump.png" alt="img" /></p>
+
+<h4 id="domain-controller-access">Domain Controller Access</h4>
+<p>Using stolen tokens and elevated privileges, the attacker moved laterally to the domain controller using Impacket’s <code class="language-plaintext highlighter-rouge">wmiexec.py.</code> This provided remote command execution under high-privilege context.</p>
+
+<p>Once access was established, the attacker conducted reconnaissance, deployed additional tooling, and ultimately cleared Windows event logs and disabled Unified Audit Log ingestion. These actions were consistent with anti-forensic behavior intended to hinder incident response and obscure the full scope of the compromise.</p>
+
+<h4 id="prt-theft">PRT Theft</h4>
+<p>Further analysis revealed evidence of Primary Refresh Token (PRT) theft. A PRT is a user’s identity token that can be used to obtain new access tokens. <code class="language-plaintext highlighter-rouge">PTASpy</code> is a tool that extracts PRTs from memory in hybrid environments that use PTA.</p>
+
+<p><img src="/img/huskycorp/ptaspyflow.png" alt="alt" /></p>
+
+<p>PRT theft allows attackers to mint new access tokens on demand across Entra-integrated services, effectively bypassing MFA and Conditional Access controls. This represents one of the most severe identity compromise techniques in hybrid Azure environments.
+<img src="/img/huskycorp/ptaspy.png" alt="alt" /></p>
+
+<h2 id="reconstructed-timeline">Reconstructed Timeline</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Time (UTC)</th>
+      <th>Event</th>
+      <th>Evidence Source</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2024-04-20 21:57</td>
+      <td>Multiple failed authentication attempts against <code class="language-plaintext highlighter-rouge">Ashlee</code>, <code class="language-plaintext highlighter-rouge">Lonnard</code>, and <code class="language-plaintext highlighter-rouge">lina</code> from IP <code class="language-plaintext highlighter-rouge">103.216.220.45</code></td>
+      <td>Entra ID Sign-In Logs</td>
+      <td>Password spraying behavior</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 22:36</td>
+      <td>Successful credential validation for <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
+      <td>Entra ID Sign-In Logs</td>
+      <td>Account uses Pass-Through Authentication</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 22:37</td>
+      <td>Conditional Access blocks initial interactive sign-in attempts</td>
+      <td>Entra ID Sign-In Logs</td>
+      <td><code class="language-plaintext highlighter-rouge">ConditionalAccessFailed</code></td>
+    </tr>
+    <tr>
+      <td>2024-04-20 22:41</td>
+      <td>Successful sign-in from IP <code class="language-plaintext highlighter-rouge">146.70.196.180</code> using user agent <code class="language-plaintext highlighter-rouge">azurehound/v2.1.8</code></td>
+      <td>Entra ID Sign-In Logs</td>
+      <td>Indicates tenant reconnaissance tooling</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 22:42</td>
+      <td>Microsoft Graph enumeration activity begins</td>
+      <td>Entra ID Audit Logs / Graph Telemetry</td>
+      <td>User, role, and application discovery</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:05</td>
+      <td>OAuth consent phishing email sent to <code class="language-plaintext highlighter-rouge">Lonnard@huskycorp.net</code></td>
+      <td>Exchange Message Trace</td>
+      <td>Consent request for <strong>Calendar-Sync</strong></td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:11</td>
+      <td>Administrative consent granted for <strong>Calendar-Sync</strong></td>
+      <td>Entra ID Audit Logs</td>
+      <td>Malicious service principal created</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:14</td>
+      <td>Non-interactive Microsoft Graph access via <strong>Calendar-Sync</strong></td>
+      <td>Entra ID Non-Interactive Sign-In Logs</td>
+      <td>OAuth-based persistence established</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:21</td>
+      <td>Hidden inbox rule created forwarding mail externally</td>
+      <td>Exchange Audit Logs</td>
+      <td>Mailbox persistence</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:34</td>
+      <td>Attacker added as owner of <strong>TechDocuments</strong> application</td>
+      <td>Entra ID Audit Logs</td>
+      <td>Application ownership abuse</td>
+    </tr>
+    <tr>
+      <td>2024-04-20 23:47</td>
+      <td>Federated domain <code class="language-plaintext highlighter-rouge">huskyhelpdesk.store</code> added to tenant</td>
+      <td>Entra ID Audit Logs</td>
+      <td>Tenant-level authentication backdoor</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 00:12</td>
+      <td>Authentication via attacker-controlled federated IdP</td>
+      <td>Entra ID Sign-In Logs</td>
+      <td>MFA and Conditional Access bypass</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 01:03</td>
+      <td>Managed identity on <code class="language-plaintext highlighter-rouge">HuskyVM</code> enumerates Azure resources</td>
+      <td>Azure Activity Logs</td>
+      <td>Workload identity abuse</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 01:09</td>
+      <td>Managed identity granted <strong>Key Vault Administrator</strong> role</td>
+      <td>Azure Activity Logs</td>
+      <td>Privilege escalation</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 01:12</td>
+      <td>Secrets accessed and backed up from <code class="language-plaintext highlighter-rouge">HuskyKey</code> vault</td>
+      <td>Key Vault Diagnostics Logs</td>
+      <td>Secret exfiltration</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:04</td>
+      <td>Internal phishing document delivered via SharePoint</td>
+      <td>SharePoint Audit Logs</td>
+      <td>Pivot to on-premises</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:09</td>
+      <td>Malicious LNK executed; DLL loaded via <code class="language-plaintext highlighter-rouge">rundll32.exe</code></td>
+      <td>Windows Event Logs</td>
+      <td>Initial code execution</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:12</td>
+      <td>Office applications spawned; memory dumps created</td>
+      <td>Host Artifacts</td>
+      <td>Token harvesting</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:31</td>
+      <td>Lateral movement to domain controller via <code class="language-plaintext highlighter-rouge">wmiexec.py</code></td>
+      <td>Security Logs</td>
+      <td>Remote command execution</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:36</td>
+      <td><code class="language-plaintext highlighter-rouge">PTASpy.dll</code> injected; Primary Refresh Token extracted</td>
+      <td>Host Artifacts / AADInternals</td>
+      <td>Hybrid identity compromise</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:41</td>
+      <td>Windows event logs cleared on domain controller</td>
+      <td>Windows Event Logs</td>
+      <td>Anti-forensics</td>
+    </tr>
+    <tr>
+      <td>2024-04-21 02:44</td>
+      <td>Unified Audit Log ingestion disrupted</td>
+      <td>Microsoft 365 Audit Logs</td>
+      <td>Attempted evidence suppression</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="closing-notes">Closing Notes</h2>
+<p>This incident demonstrates that modern attackers increasingly target identity rather than just exploiting traditional software vulnerabilities. Defending against these threats requires treating identity as a primary security boundary and implementing controls that limit persistence, visibility gaps, and privilege escalation across both cloud and on-premises environments.</p>]]></content><author><name>HC</name></author><category term="research" /><category term="research" /><category term="cloud" /><category term="containers" /><category term="security" /><summary type="html"><![CDATA[Introduction This is my write-up of an investigation I conducted while working through Xintra’s HuskyCorp incident simulation lab, along with what I learned throughout the process. The investigation revealed a hybrid end-to-end compromise and showed how an attacker can abuse identity in Entra ID in a variety of ways in order to escalate their privileges, maintain persistence, and effectively take over a tenant. By the end of the incident, the attacker gained administrative privileges within Entra, the on-premises Active Directory domain, and sensitive company information.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="http://localhost:4000/img/huskycorp/oauthflow.png" /><media:content medium="image" url="http://localhost:4000/img/huskycorp/oauthflow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">A Brief Deep-Dive into Attacking and Defending Kubernetes</title><link href="http://localhost:4000/research/2025/12/16/kubernetes.html" rel="alternate" type="text/html" title="A Brief Deep-Dive into Attacking and Defending Kubernetes" /><published>2025-12-16T00:00:00-06:00</published><updated>2025-12-16T00:00:00-06:00</updated><id>http://localhost:4000/research/2025/12/16/kubernetes</id><content type="html" xml:base="http://localhost:4000/research/2025/12/16/kubernetes.html"><![CDATA[<h2 id="introduction">Introduction</h2>
 
 <p>When I first began writing this blog, I wanted to cover every single attack vector in Kubernetes. For anyone already acquainted with Kubernetes, you probably realize how daunting that is. I very quickly realized that I was far out of my depth and the scope for this post was reaching something unattainable. Before writing this, I had no idea just how vast Kubernetes is and I will definitely say I have a better idea now. My main motivation for writing this was to better understand for myself how Kubernetes works and its attack surface. I was also inspired from talking to people in the field and realizing just how prominent Kubernetes is in corporate environments.</p>
 

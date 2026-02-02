@@ -458,6 +458,39 @@ blockquote > p::before {
   max-width: 480px;
 }
 
+.post-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.post-body th,
+.post-body td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.post-body th {
+  background-color: #be8db5;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Alternating table row colors */
+.post-body tbody tr:nth-child(odd) {
+  background-color: rgba(201, 154, 187, 0.6274509804);
+}
+
+.post-body tbody tr:nth-child(even) {
+  background-color: rgba(255, 180, 223, 0.7176470588);
+}
+
+.post-body tbody tr:hover {
+  background-color: #f9cfd8;
+}
+
 .floating-label-form-group {
   font-size: 14px;
   position: relative;

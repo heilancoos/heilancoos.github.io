@@ -205,3 +205,33 @@ blockquote>p{
 .post-body img.small {
   max-width: 480px;
 }
+.post-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.post-body th,
+.post-body td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.post-body th {
+  background-color: #be8db5;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+}
+/* Alternating table row colors */
+.post-body tbody tr:nth-child(odd) {
+  background-color: #c99abba0;  // light pink
+}
+
+.post-body tbody tr:nth-child(even) {
+  background-color: #ffb4dfb7;  // slightly darker pink
+}
+.post-body tbody tr:hover {
+  background-color: #f9cfd8;
+}

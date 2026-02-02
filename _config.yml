@@ -14,4 +14,8 @@ paginate_path:     "/posts/page:num/"
 plugins:
   - jekyll-feed
   - jekyll-paginate
+collections:
+  writeups:
+    output: true
+    permalink: /writeups/:title/
 
