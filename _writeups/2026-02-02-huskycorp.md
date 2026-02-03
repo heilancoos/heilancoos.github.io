@@ -98,7 +98,7 @@ Using credentials for the user `Ashlee@huskycorp.net`, previously obtained durin
 
 ![image14](/img/huskycorp/techdocumentsapplication.png)
 
-This technique allows attackers to authenticate as the application itself.
+This technique allows attackers to authenticate as the application itself. 
 
 ![image15](/img/huskycorp/techdocumentsignin.png)
 
