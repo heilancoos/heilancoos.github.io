@@ -1,4 +1,147 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-02-03T10:49:59-06:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Understanding Identity Abuse in Entra ID through a Case Study (Xintra)</title><link href="http://localhost:4000/write-up/2026/02/02/huskycorp.html" rel="alternate" type="text/html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)" /><published>2026-02-02T00:00:00-06:00</published><updated>2026-02-02T00:00:00-06:00</updated><id>http://localhost:4000/write-up/2026/02/02/huskycorp</id><content type="html" xml:base="http://localhost:4000/write-up/2026/02/02/huskycorp.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-04-22T15:11:24-05:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Heilan Cyber</title><subtitle>...in the pursuit of knowledge</subtitle><author><name>HC</name></author><entry><title type="html">Automating Kubernetes Security Labs with Ludus</title><link href="http://localhost:4000/research/2026/04/22/ludus-k8s.html" rel="alternate" type="text/html" title="Automating Kubernetes Security Labs with Ludus" /><published>2026-04-22T00:00:00-05:00</published><updated>2026-04-22T00:00:00-05:00</updated><id>http://localhost:4000/research/2026/04/22/ludus-k8s</id><content type="html" xml:base="http://localhost:4000/research/2026/04/22/ludus-k8s.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<p>In my blog on <a href="https://heilancoos.github.io/research/2025/12/16/kubernetes.html">Attacking and Defending Kubernetes</a>, I covered several different attack techniques and provided Falco detections for them. While writing that blog over the course of 3 months, I found that I spent most of my time simply trying to get things working properly as things tend to go with security research.</p>
+
+<p><img src="/img/ludus_k8s/danieleheinsen.png" alt="image1" /></p>
+
+<p>There is something to be said about the fact that setting up and configuring environments is worthwhile for upskilling and gaining a fuller understanding of different tools. However, at the same time, it can be a significant barrier to entry when it comes to security research. This problem is the underlying philosophy why <a href="https://blog.badsectorlabs.com/">Bad Sector Labs</a> released their cyber range deployment tool, <a href="https://docs.ludus.cloud/">Ludus</a>. Ludus allows users to quickly and easily deploy environments in Proxmox using Ansible and Packer. This has made security research infinitely easier and I wish I was aware of it earlier.</p>
+
+<p>I’ve decided to release a collection of Ansible roles that makes setting up Kubernetes environments a lot easier for security research. This blog post will cover the main features of <code class="language-plaintext highlighter-rouge">ludus_k8s</code>.</p>
+
+<h2 id="architecture-overview">Architecture Overview</h2>
+<p><code class="language-plaintext highlighter-rouge">ludus_k8s</code> supports <code class="language-plaintext highlighter-rouge">microk8s</code> and <code class="language-plaintext highlighter-rouge">kubeadm</code> for cluster deployment methods. The default is <code class="language-plaintext highlighter-rouge">microk8s</code>, but the other options can be set by configuring <code class="language-plaintext highlighter-rouge">k8s_flavor</code> in the main configuration file.</p>
+
+<p>Falco is used for runtime detections. It watches node activity and alerts based on pre-defined or custom rules. I talk more in-depth about Falco in my other blog <a href="https://heilancoos.github.io/research/2025/12/16/kubernetes.html#falco">here</a>. Falcosidekick then forwards those alerts to a configured endpoint. In <code class="language-plaintext highlighter-rouge">ludus_k8s</code>, there is built-in support for running Falcosidekick UI to display alerts. There is also support for Grafana/Loki stack, where Loki serves as centralized log aggregation and then Grafana visualizes those logs in a dashboard.</p>
+
+<p><img src="/img/ludus_k8s/arch.png" alt="image1" /></p>
+
+<p>Additionally, for users with the use case of deploying several nodes within a single cluster, <code class="language-plaintext highlighter-rouge">ludus_k8s</code> supports multinode functionality for both deployment methods.</p>
+
+<p>Finally, since the whole reasoning behind this is for security research, <code class="language-plaintext highlighter-rouge">ludus_k8s</code> provides an easy way to configure common vulnerable misconfigurations such as unauthenticated access to the API server and Kubelet API, <code class="language-plaintext highlighter-rouge">ETCD</code> service exposure, insecure RBAC configurations, and more.</p>
+
+<h3 id="core-k8s-features">Core K8s features</h3>
+<p>The <code class="language-plaintext highlighter-rouge">install_k8s</code> role handles features like cluster configuration and embedding vulnerabilities. <code class="language-plaintext highlighter-rouge">microk8s</code> is the default flavor.</p>
+
+<h4 id="pods">Pods</h4>
+<p><code class="language-plaintext highlighter-rouge">custom_pods</code> takes a list where each entry is either an inline pod manifest or a path string to a YAML file.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">custom_pods</span><span class="pi">:</span>
+<span class="c1"># Inline pod sepc</span>
+<span class="pi">-</span> <span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+  <span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>
+  <span class="na">metadata</span><span class="pi">:</span>
+<span class="err">	</span><span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">	namespace</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="s">spec</span><span class="err">:</span>
+<span class="err">	</span><span class="na">containers</span><span class="pi">:</span>
+<span class="err">	</span>  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">		image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+<span class="na">		ports</span><span class="pi">:</span>
+<span class="err">		</span>  <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">80</span>
+<span class="c1"># File path</span>
+<span class="pi">-</span> <span class="s2">"</span><span class="s">/home/localuser/my-deployment.yaml"</span>
+</code></pre></div></div>
+<h4 id="rbac">RBAC</h4>
+
+<p>Service accounts, namespaces, Roles/ClusterRoles, and RoleBindings/ClusterRolebindings can be configured with <code class="language-plaintext highlighter-rouge">rbac_namespaces</code>, <code class="language-plaintext highlighter-rouge">rbac_service_accounts</code>, <code class="language-plaintext highlighter-rouge">rbac_roles</code>, and <code class="language-plaintext highlighter-rouge">rbac_bindings</code>.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">rbac_namespaces</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">dev</span>
+<span class="na">rbac_service_accounts</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">app-sa</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+<span class="na">rbac_roles</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>
+    <span class="na">rules</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
+        <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">secrets"</span><span class="pi">]</span>
+        <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>
+<span class="na">rbac_bindings</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRoleBinding</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader-binding</span>
+    <span class="na">role_ref</span><span class="pi">:</span>
+      <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>
+    <span class="na">subjects</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">app-sa</span>
+        <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+</code></pre></div></div>
+<h4 id="network-policies">Network Policies</h4>
+<p>Specific Network Policies Providers can be enabled with <code class="language-plaintext highlighter-rouge">k8s_cni</code> for <code class="language-plaintext highlighter-rouge">kubeadm</code> deployments. Currently supported providers are Calico and Cilium.</p>
+
+<p>For <code class="language-plaintext highlighter-rouge">microk8s</code>, Calico can be enabled with <code class="language-plaintext highlighter-rouge">enable_network_policies</code>.</p>
+<h4 id="pod-security-admission-psa">Pod Security Admission (PSA)</h4>
+<p><a href="https://kubernetes.io/docs/concepts/security/pod-security-admission/">PSA</a> is an Admission Controller that can enforce Pod Security Standards which define different isolation levels in Pods. It is enabled with <code class="language-plaintext highlighter-rouge">enable_pod_security_admission</code> and defined with <code class="language-plaintext highlighter-rouge">psa_namespaces</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">psa_namespaces</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">prod</span>
+    <span class="na">enforce</span><span class="pi">:</span> <span class="s">restricted</span>
+    <span class="na">audit</span><span class="pi">:</span> <span class="s">restricted</span>
+    <span class="na">warn</span><span class="pi">:</span> <span class="s">restricted</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">staging</span>
+    <span class="na">enforce</span><span class="pi">:</span> <span class="s">baseline</span>
+</code></pre></div></div>
+
+<h4 id="admission-controllers">Admission Controllers</h4>
+<p><code class="language-plaintext highlighter-rouge">enable_admission_controller</code> will deploy a Kyverno admission controller that is either Validating or Mutating. There are four pre-defined policies: <code class="language-plaintext highlighter-rouge">block_privileged</code>,  <code class="language-plaintext highlighter-rouge">require_labels</code>,  <code class="language-plaintext highlighter-rouge">inject_security_context</code>, and <code class="language-plaintext highlighter-rouge">add_default_labels</code>.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">block_privileged</code>: A validating admission controller that refuses the deployment of any privileged containers and hostPath mounts.</li>
+  <li><code class="language-plaintext highlighter-rouge">require_labels</code>: A validating admission controller that requires environment and app labels on namespaces and pods.</li>
+  <li><code class="language-plaintext highlighter-rouge">inject_security_context</code>: A mutating admission controller that injects a hardened securityContext into pods.</li>
+  <li><code class="language-plaintext highlighter-rouge">add_default_labels</code>: A mutating admission controller that adds an environment labels to namespaces without it.</li>
+</ul>
+
+<p>Custom policies can also be passed through <code class="language-plaintext highlighter-rouge">kyverno_custom_policies</code>.</p>
+
+<h4 id="multinode">Multinode</h4>
+<p>For simple environments, often a singular node suffices. For more complex environments, a multi-node cluster can be used to ensure high-availability. A multi-node cluster consists of one Master node and one or more Worker nodes.</p>
+
+<p>The Master node is where the Control Plane lives and handles things like scheduling workloads. Worker nodes are where the workloads actually get run.</p>
+
+<p>Note: On <code class="language-plaintext highlighter-rouge">microk8s</code> clusters with multiple nodes, High-Availability is managed by Dqlite rather than <code class="language-plaintext highlighter-rouge">ETCD</code>. Consequentially, <code class="language-plaintext highlighter-rouge">unauth_etcd</code> is not available on <code class="language-plaintext highlighter-rouge">microk8s</code> clusters with <code class="language-plaintext highlighter-rouge">multinode: true</code>.</p>
+
+<h4 id="headlamp-dashboard">Headlamp Dashboard</h4>
+<p>Since the Kubernetes Dashboard is deprecated, Headlamp serves as an alternative.</p>
+
+<p><code class="language-plaintext highlighter-rouge">enable_headlamp</code> deploys the Headlamp Dashboard and specific configurations such as <code class="language-plaintext highlighter-rouge">headlamp_namespace</code> and <code class="language-plaintext highlighter-rouge">headlamp_nodeport</code> can be defined as well.
+<img src="/img/ludus_k8s/headlamp.png" alt="image1" /></p>
+
+<h3 id="telemetry">Telemetry</h3>
+<p>Falco is installed by default relying on both syscalls and k8saudit for detections. UI selection is defined by <code class="language-plaintext highlighter-rouge">ui</code> and supports either <code class="language-plaintext highlighter-rouge">grafana</code> or <code class="language-plaintext highlighter-rouge">falcosidekick</code> which deploys the FalcoSidekick web ui.</p>
+
+<p><img src="/img/ludus_k8s/grafana.png" alt="image1" /></p>
+
+<p>There are some pre-defined Falco rules that live in <code class="language-plaintext highlighter-rouge">roles/telemetry/tasks/deps/rules.yaml</code> for easy reference. <code class="language-plaintext highlighter-rouge">falco_custom_rules</code> takes a string of rule names to deploy with Helm.</p>
+
+<p>Example:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">falco_custom_rules</span><span class="pi">:</span>
+<span class="err">	</span><span class="pi">-</span> <span class="s2">"</span><span class="s">Anonymous</span><span class="nv"> </span><span class="s">Request</span><span class="nv"> </span><span class="s">Allowed"</span>
+</code></pre></div></div>
+
+<h3 id="insecure-configurations">Insecure Configurations</h3>
+<h4 id="unauthenticated-api-access">Unauthenticated API Access</h4>
+<p><code class="language-plaintext highlighter-rouge">enable_unauth_api</code> and <code class="language-plaintext highlighter-rouge">enable_unauth_kubelet</code>  can be enabled to configure unauthenticated access to the API server and the Kubelet API. Additionally, Kubelet API is configured with the authorization mode set to <code class="language-plaintext highlighter-rouge">AlwaysAllow</code>.</p>
+
+<p><code class="language-plaintext highlighter-rouge">enable_unauth_api</code> does not change the authorization mode however. <code class="language-plaintext highlighter-rouge">anon_cluster_admin: true</code> will bind <code class="language-plaintext highlighter-rouge">cluster-admin</code> to <code class="language-plaintext highlighter-rouge">system:anonymous</code>.</p>
+
+<h4 id="unauthenticated-etcd-access">Unauthenticated ETCD Access</h4>
+<p><code class="language-plaintext highlighter-rouge">unauth_etcd: true</code>  exposes ETCD without authentication and installs <code class="language-plaintext highlighter-rouge">etcdctl</code> and <code class="language-plaintext highlighter-rouge">kubetcd</code>.</p>
+
+<h4 id="anonymous-cluster-admin">Anonymous Cluster Admin</h4>
+<p><code class="language-plaintext highlighter-rouge">anon_cluster_admin</code> binds <code class="language-plaintext highlighter-rouge">cluster-admin</code> to <code class="language-plaintext highlighter-rouge">system:anonymous</code></p>
+
+<h4 id="kubernetes-remote-code-execution-via-nodesproxy-get-permission">Kubernetes Remote Code Execution Via Nodes/Proxy GET Permission</h4>
+<p>A technique first detailed by <a href="https://grahamhelton.com/">Graham Helton</a>, <code class="language-plaintext highlighter-rouge">gh_nodes_proxy</code> enables a demo environment that sets up a ClusterRole with the permissions <code class="language-plaintext highlighter-rouge">nodes/proxy get</code>.</p>
+
+<p>Details on how the technique works can be found <a href="https://grahamhelton.com/blog/nodes-proxy-rce">here</a>.</p>
+
+<h4 id="pod-remote-code-execution">Pod Remote Code Execution</h4>
+<p><code class="language-plaintext highlighter-rouge">demo_pod_rce: true</code> deploys a Flask app with a command injection vulnerability.</p>
+
+<h2 id="final-thoughts">Final Thoughts</h2>
+<p>It is my hope that this role collection will be helpful to security researchers, sysadmins, and anyone wanting to dive further into Kubernetes. For future expansion plans, I hope to add support for other Kubernetes deployment methods and additional features to make deploying Kubernetes clusters even more accessible.</p>]]></content><author><name>HC</name></author><category term="research" /><category term="research" /><category term="cloud" /><category term="containers" /><category term="security" /><summary type="html"><![CDATA[Introduction In my blog on Attacking and Defending Kubernetes, I covered several different attack techniques and provided Falco detections for them. While writing that blog over the course of 3 months, I found that I spent most of my time simply trying to get things working properly as things tend to go with security research.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="http://localhost:4000/img/ludus_k8s/arch.png" /><media:content medium="image" url="http://localhost:4000/img/ludus_k8s/arch.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Understanding Identity Abuse in Entra ID through a Case Study (Xintra)</title><link href="http://localhost:4000/write-up/2026/02/02/huskycorp.html" rel="alternate" type="text/html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)" /><published>2026-02-02T00:00:00-06:00</published><updated>2026-02-02T00:00:00-06:00</updated><id>http://localhost:4000/write-up/2026/02/02/huskycorp</id><content type="html" xml:base="http://localhost:4000/write-up/2026/02/02/huskycorp.html"><![CDATA[<h2 id="introduction">Introduction</h2>
 <p>This is my write-up of an investigation I conducted while working through Xintra’s HuskyCorp incident simulation lab, along with what I learned throughout the process. The investigation revealed a hybrid end-to-end compromise and showed how an attacker can abuse identity in Entra ID in a variety of ways in order to escalate their privileges, maintain persistence, and effectively take over a tenant. By the end of the incident, the attacker gained administrative privileges within Entra, the on-premises Active Directory domain, and sensitive company information.</p>
 
 <h2 id="executive-summary">Executive Summary</h2>

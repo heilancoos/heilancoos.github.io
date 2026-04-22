@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>
+    Automating Kubernetes Security Labs with Ludus - Heilan Cyber
+    
+  </title>
+
+  <meta name="description" content="Introduction In my blog on Attacking and Defending Kubernetes, I covered several different attack techniques and provided Falco detections for them. While wr...">
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/assets/main.css">
+
+  <!-- TOC-specific stylesheet -->
+  <link rel="stylesheet" href="/assets/vendor/startbootstrap-clean-blog/scss/toc.css">
+
+  <link rel="icon" type="image/png" href="/img/favicon.ico">
+
+  <link rel="canonical" href="http://localhost:4000/research/2026/04/22/ludus-k8s.html">
+  <link rel="alternate" type="application/rss+xml" title="Heilan Cyber" href="/feed.xml">
+
+  <!-- Open Graph (for Discord, Facebook, LinkedIn) -->
+  
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Automating Kubernetes Security Labs with Ludus" />
+  <meta property="og:description" content="Reproducible Kubernetes security environments with ludus_k8s" />
+  <meta property="og:url" content="http://localhost:4000/research/2026/04/22/ludus-k8s.html" />
+  <meta property="og:image" content="http://localhost:4000/img/ludus_k8s/arch.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Automating Kubernetes Security Labs with Ludus" />
+  <meta name="twitter:description" content="Reproducible Kubernetes security environments with ludus_k8s" />
+  <meta name="twitter:image" content="http://localhost:4000/img/ludus_k8s/arch.png" />
+
+</head>
+
+  <body>
+    <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <!-- <a class="navbar-brand" href="/">Start Bootstrap</a> -->
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/writeups">Write-ups</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+    <!-- Page Header -->
+    
+    <header class="masthead" style="background-image: url('/img/ludus_k8s/arch.png')">
+    
+      <div class="overlay"></div>
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-8 col-md-10 mx-auto">
+            <div class="post-heading">
+              <h1>Automating Kubernetes Security Labs with Ludus</h1>
+              <span class="meta">HC / April 22, 2026</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="row">
+        <!-- TOC Sidebar -->
+        <aside class="col-lg-3 d-none d-lg-block">
+          <div class="toc">
+            <h5>Contents</h5>
+            <ul id="toc-list" class="list-unstyled"></ul>
+          </div>
+        </aside>
+
+        <!-- Post Body -->
+        <div class="col-lg-9 col-md-12 post-body">
+          <h2 id="introduction">Introduction</h2>
+<p>In my blog on <a href="https://heilancoos.github.io/research/2025/12/16/kubernetes.html">Attacking and Defending Kubernetes</a>, I covered several different attack techniques and provided Falco detections for them. While writing that blog over the course of 3 months, I found that I spent most of my time simply trying to get things working properly as things tend to go with security research.</p>
+
+<p><img src="/img/ludus_k8s/danieleheinsen.png" alt="image1" /></p>
+
+<p>There is something to be said about the fact that setting up and configuring environments is worthwhile for upskilling and gaining a fuller understanding of different tools. However, at the same time, it can be a significant barrier to entry when it comes to security research. This problem is the underlying philosophy why <a href="https://blog.badsectorlabs.com/">Bad Sector Labs</a> released their cyber range deployment tool, <a href="https://docs.ludus.cloud/">Ludus</a>. Ludus allows users to quickly and easily deploy environments in Proxmox using Ansible and Packer. This has made security research infinitely easier and I wish I was aware of it earlier.</p>
+
+<p>I’ve decided to release a collection of Ansible roles that makes setting up Kubernetes environments a lot easier for security research. This blog post will cover the main features of <code class="language-plaintext highlighter-rouge">ludus_k8s</code>.</p>
+
+<h2 id="architecture-overview">Architecture Overview</h2>
+<p><code class="language-plaintext highlighter-rouge">ludus_k8s</code> supports <code class="language-plaintext highlighter-rouge">microk8s</code> and <code class="language-plaintext highlighter-rouge">kubeadm</code> for cluster deployment methods. The default is <code class="language-plaintext highlighter-rouge">microk8s</code>, but the other options can be set by configuring <code class="language-plaintext highlighter-rouge">k8s_flavor</code> in the main configuration file.</p>
+
+<p>Falco is used for runtime detections. It watches node activity and alerts based on pre-defined or custom rules. I talk more in-depth about Falco in my other blog <a href="https://heilancoos.github.io/research/2025/12/16/kubernetes.html#falco">here</a>. Falcosidekick then forwards those alerts to a configured endpoint. In <code class="language-plaintext highlighter-rouge">ludus_k8s</code>, there is built-in support for running Falcosidekick UI to display alerts. There is also support for Grafana/Loki stack, where Loki serves as centralized log aggregation and then Grafana visualizes those logs in a dashboard.</p>
+
+<p><img src="/img/ludus_k8s/arch.png" alt="image1" /></p>
+
+<p>Additionally, for users with the use case of deploying several nodes within a single cluster, <code class="language-plaintext highlighter-rouge">ludus_k8s</code> supports multinode functionality for both deployment methods.</p>
+
+<p>Finally, since the whole reasoning behind this is for security research, <code class="language-plaintext highlighter-rouge">ludus_k8s</code> provides an easy way to configure common vulnerable misconfigurations such as unauthenticated access to the API server and Kubelet API, <code class="language-plaintext highlighter-rouge">ETCD</code> service exposure, insecure RBAC configurations, and more.</p>
+
+<h3 id="core-k8s-features">Core K8s features</h3>
+<p>The <code class="language-plaintext highlighter-rouge">install_k8s</code> role handles features like cluster configuration and embedding vulnerabilities. <code class="language-plaintext highlighter-rouge">microk8s</code> is the default flavor.</p>
+
+<h4 id="pods">Pods</h4>
+<p><code class="language-plaintext highlighter-rouge">custom_pods</code> takes a list where each entry is either an inline pod manifest or a path string to a YAML file.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">custom_pods</span><span class="pi">:</span>
+<span class="c1"># Inline pod sepc</span>
+<span class="pi">-</span> <span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+  <span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>
+  <span class="na">metadata</span><span class="pi">:</span>
+<span class="err">	</span><span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">	namespace</span><span class="pi">:</span> <span class="s">default</span>
+  <span class="s">spec</span><span class="err">:</span>
+<span class="err">	</span><span class="na">containers</span><span class="pi">:</span>
+<span class="err">	</span>  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">nginx</span>
+<span class="na">		image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
+<span class="na">		ports</span><span class="pi">:</span>
+<span class="err">		</span>  <span class="pi">-</span> <span class="na">containerPort</span><span class="pi">:</span> <span class="m">80</span>
+<span class="c1"># File path</span>
+<span class="pi">-</span> <span class="s2">"</span><span class="s">/home/localuser/my-deployment.yaml"</span>
+</code></pre></div></div>
+<h4 id="rbac">RBAC</h4>
+
+<p>Service accounts, namespaces, Roles/ClusterRoles, and RoleBindings/ClusterRolebindings can be configured with <code class="language-plaintext highlighter-rouge">rbac_namespaces</code>, <code class="language-plaintext highlighter-rouge">rbac_service_accounts</code>, <code class="language-plaintext highlighter-rouge">rbac_roles</code>, and <code class="language-plaintext highlighter-rouge">rbac_bindings</code>.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">rbac_namespaces</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">dev</span>
+<span class="na">rbac_service_accounts</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">app-sa</span>
+    <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+<span class="na">rbac_roles</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>
+    <span class="na">rules</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">apiGroups</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">"</span><span class="pi">]</span>
+        <span class="na">resources</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">secrets"</span><span class="pi">]</span>
+        <span class="na">verbs</span><span class="pi">:</span> <span class="pi">[</span><span class="s2">"</span><span class="s">get"</span><span class="pi">,</span> <span class="s2">"</span><span class="s">list"</span><span class="pi">]</span>
+<span class="na">rbac_bindings</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRoleBinding</span>
+    <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader-binding</span>
+    <span class="na">role_ref</span><span class="pi">:</span>
+      <span class="na">kind</span><span class="pi">:</span> <span class="s">ClusterRole</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">secret-reader</span>
+    <span class="na">subjects</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">kind</span><span class="pi">:</span> <span class="s">ServiceAccount</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">app-sa</span>
+        <span class="na">namespace</span><span class="pi">:</span> <span class="s">dev</span>
+</code></pre></div></div>
+<h4 id="network-policies">Network Policies</h4>
+<p>Specific Network Policies Providers can be enabled with <code class="language-plaintext highlighter-rouge">k8s_cni</code> for <code class="language-plaintext highlighter-rouge">kubeadm</code> deployments. Currently supported providers are Calico and Cilium.</p>
+
+<p>For <code class="language-plaintext highlighter-rouge">microk8s</code>, Calico can be enabled with <code class="language-plaintext highlighter-rouge">enable_network_policies</code>.</p>
+<h4 id="pod-security-admission-psa">Pod Security Admission (PSA)</h4>
+<p><a href="https://kubernetes.io/docs/concepts/security/pod-security-admission/">PSA</a> is an Admission Controller that can enforce Pod Security Standards which define different isolation levels in Pods. It is enabled with <code class="language-plaintext highlighter-rouge">enable_pod_security_admission</code> and defined with <code class="language-plaintext highlighter-rouge">psa_namespaces</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">psa_namespaces</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">prod</span>
+    <span class="na">enforce</span><span class="pi">:</span> <span class="s">restricted</span>
+    <span class="na">audit</span><span class="pi">:</span> <span class="s">restricted</span>
+    <span class="na">warn</span><span class="pi">:</span> <span class="s">restricted</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">staging</span>
+    <span class="na">enforce</span><span class="pi">:</span> <span class="s">baseline</span>
+</code></pre></div></div>
+
+<h4 id="admission-controllers">Admission Controllers</h4>
+<p><code class="language-plaintext highlighter-rouge">enable_admission_controller</code> will deploy a Kyverno admission controller that is either Validating or Mutating. There are four pre-defined policies: <code class="language-plaintext highlighter-rouge">block_privileged</code>,  <code class="language-plaintext highlighter-rouge">require_labels</code>,  <code class="language-plaintext highlighter-rouge">inject_security_context</code>, and <code class="language-plaintext highlighter-rouge">add_default_labels</code>.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">block_privileged</code>: A validating admission controller that refuses the deployment of any privileged containers and hostPath mounts.</li>
+  <li><code class="language-plaintext highlighter-rouge">require_labels</code>: A validating admission controller that requires environment and app labels on namespaces and pods.</li>
+  <li><code class="language-plaintext highlighter-rouge">inject_security_context</code>: A mutating admission controller that injects a hardened securityContext into pods.</li>
+  <li><code class="language-plaintext highlighter-rouge">add_default_labels</code>: A mutating admission controller that adds an environment labels to namespaces without it.</li>
+</ul>
+
+<p>Custom policies can also be passed through <code class="language-plaintext highlighter-rouge">kyverno_custom_policies</code>.</p>
+
+<h4 id="multinode">Multinode</h4>
+<p>For simple environments, often a singular node suffices. For more complex environments, a multi-node cluster can be used to ensure high-availability. A multi-node cluster consists of one Master node and one or more Worker nodes.</p>
+
+<p>The Master node is where the Control Plane lives and handles things like scheduling workloads. Worker nodes are where the workloads actually get run.</p>
+
+<p>Note: On <code class="language-plaintext highlighter-rouge">microk8s</code> clusters with multiple nodes, High-Availability is managed by Dqlite rather than <code class="language-plaintext highlighter-rouge">ETCD</code>. Consequentially, <code class="language-plaintext highlighter-rouge">unauth_etcd</code> is not available on <code class="language-plaintext highlighter-rouge">microk8s</code> clusters with <code class="language-plaintext highlighter-rouge">multinode: true</code>.</p>
+
+<h4 id="headlamp-dashboard">Headlamp Dashboard</h4>
+<p>Since the Kubernetes Dashboard is deprecated, Headlamp serves as an alternative.</p>
+
+<p><code class="language-plaintext highlighter-rouge">enable_headlamp</code> deploys the Headlamp Dashboard and specific configurations such as <code class="language-plaintext highlighter-rouge">headlamp_namespace</code> and <code class="language-plaintext highlighter-rouge">headlamp_nodeport</code> can be defined as well.
+<img src="/img/ludus_k8s/headlamp.png" alt="image1" /></p>
+
+<h3 id="telemetry">Telemetry</h3>
+<p>Falco is installed by default relying on both syscalls and k8saudit for detections. UI selection is defined by <code class="language-plaintext highlighter-rouge">ui</code> and supports either <code class="language-plaintext highlighter-rouge">grafana</code> or <code class="language-plaintext highlighter-rouge">falcosidekick</code> which deploys the FalcoSidekick web ui.</p>
+
+<p><img src="/img/ludus_k8s/grafana.png" alt="image1" /></p>
+
+<p>There are some pre-defined Falco rules that live in <code class="language-plaintext highlighter-rouge">roles/telemetry/tasks/deps/rules.yaml</code> for easy reference. <code class="language-plaintext highlighter-rouge">falco_custom_rules</code> takes a string of rule names to deploy with Helm.</p>
+
+<p>Example:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">falco_custom_rules</span><span class="pi">:</span>
+<span class="err">	</span><span class="pi">-</span> <span class="s2">"</span><span class="s">Anonymous</span><span class="nv"> </span><span class="s">Request</span><span class="nv"> </span><span class="s">Allowed"</span>
+</code></pre></div></div>
+
+<h3 id="insecure-configurations">Insecure Configurations</h3>
+<h4 id="unauthenticated-api-access">Unauthenticated API Access</h4>
+<p><code class="language-plaintext highlighter-rouge">enable_unauth_api</code> and <code class="language-plaintext highlighter-rouge">enable_unauth_kubelet</code>  can be enabled to configure unauthenticated access to the API server and the Kubelet API. Additionally, Kubelet API is configured with the authorization mode set to <code class="language-plaintext highlighter-rouge">AlwaysAllow</code>.</p>
+
+<p><code class="language-plaintext highlighter-rouge">enable_unauth_api</code> does not change the authorization mode however. <code class="language-plaintext highlighter-rouge">anon_cluster_admin: true</code> will bind <code class="language-plaintext highlighter-rouge">cluster-admin</code> to <code class="language-plaintext highlighter-rouge">system:anonymous</code>.</p>
+
+<h4 id="unauthenticated-etcd-access">Unauthenticated ETCD Access</h4>
+<p><code class="language-plaintext highlighter-rouge">unauth_etcd: true</code>  exposes ETCD without authentication and installs <code class="language-plaintext highlighter-rouge">etcdctl</code> and <code class="language-plaintext highlighter-rouge">kubetcd</code>.</p>
+
+<h4 id="anonymous-cluster-admin">Anonymous Cluster Admin</h4>
+<p><code class="language-plaintext highlighter-rouge">anon_cluster_admin</code> binds <code class="language-plaintext highlighter-rouge">cluster-admin</code> to <code class="language-plaintext highlighter-rouge">system:anonymous</code></p>
+
+<h4 id="kubernetes-remote-code-execution-via-nodesproxy-get-permission">Kubernetes Remote Code Execution Via Nodes/Proxy GET Permission</h4>
+<p>A technique first detailed by <a href="https://grahamhelton.com/">Graham Helton</a>, <code class="language-plaintext highlighter-rouge">gh_nodes_proxy</code> enables a demo environment that sets up a ClusterRole with the permissions <code class="language-plaintext highlighter-rouge">nodes/proxy get</code>.</p>
+
+<p>Details on how the technique works can be found <a href="https://grahamhelton.com/blog/nodes-proxy-rce">here</a>.</p>
+
+<h4 id="pod-remote-code-execution">Pod Remote Code Execution</h4>
+<p><code class="language-plaintext highlighter-rouge">demo_pod_rce: true</code> deploys a Flask app with a command injection vulnerability.</p>
+
+<h2 id="final-thoughts">Final Thoughts</h2>
+<p>It is my hope that this role collection will be helpful to security researchers, sysadmins, and anyone wanting to dive further into Kubernetes. For future expansion plans, I hope to add support for other Kubernetes deployment methods and additional features to make deploying Kubernetes clusters even more accessible.</p>
+
+
+          <!-- Share Button -->
+          <div class="tooltipcontainer">
+            <img
+              onclick="copyToClipboard()"
+              onmouseout="outFunc()"
+              class="share-icon"
+              src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4Igp3aWR0aD0iMzIiIGhlaWdodD0iMzIiCnZpZXdCb3g9IjAgMCAxNzIgMTcyIgpzdHlsZT0iIGZpbGw6IzAwMDAwMDsiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJidXR0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1kYXNoYXJyYXk9IiIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAiIGZvbnQtZmFtaWx5PSJub25lIiBmb250LXdlaWdodD0ibm9uZSIgZm9udC1zaXplPSJub25lIiB0ZXh0LWFuY2hvcj0ibm9uZSIgc3R5bGU9Im1peC1ibGVuZC1tb2RlOiBub3JtYWwiPjxwYXRoIGQ9Ik0wLDE3MnYtMTcyaDE3MnYxNzJ6IiBmaWxsPSJub25lIj48L3BhdGg+PGcgZmlsbD0iI2ZmMDUwNSI+PGcgaWQ9InN1cmZhY2UxIj48cGF0aCBkPSJNMTM0LjM3NSwxMC43NWMtMTQuNzgxMjUsMCAtMjYuODc1LDEyLjA5Mzc1IC0yNi44NzUsMjYuODc1YzAsMS44NDc2NiAwLjIwOTk2LDMuNjExMzMgMC41NDU5LDUuMzc1bC00OC43MTA5NCwyMS45MTk5M2MtNC45MTMwOCwtNi43MTg3NSAtMTIuODA3NjEsLTExLjE2OTkzIC0yMS43MDk5NiwtMTEuMTY5OTNjLTE0Ljc4MTI1LDAgLTI2Ljg3NSwxMi4wOTM3NSAtMjYuODc1LDI2Ljg3NWMwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzguOTQ0MzMsMCAxNi45MjI4NSwtNC40OTMxNyAyMS43OTM5NSwtMTEuMjk1OWw0OC43NTI5MywyMS42Njc5N2MtMC40MTk5MiwxLjg0NzY2IC0wLjY3MTg3LDMuNzc5MjkgLTAuNjcxODcsNS43NTI5M2MwLDE0Ljc4MTI1IDEyLjA5Mzc1LDI2Ljg3NSAyNi44NzUsMjYuODc1YzE0Ljc4MTI1LDAgMjYuODc1LC0xMi4wOTM3NSAyNi44NzUsLTI2Ljg3NWMwLC0xNC43ODEyNSAtMTIuMDkzNzUsLTI2Ljg3NSAtMjYuODc1LC0yNi44NzVjLTguOTQ0MzMsMCAtMTYuOTIyODUsNC40OTMxNyAtMjEuNzkzOTUsMTEuMjk1OWwtNDguNzUyOTMsLTIxLjYyNTk3YzAuNDE5OTMsLTEuODg5NjYgMC42NzE4OCwtMy44MjEyOSAwLjY3MTg4LC01Ljc5NDkzYzAsLTIuMDE1NjIgLTAuMjUxOTUsLTMuOTg5MjYgLTAuNjcxODcsLTUuODc4OTFsNDguNDU4OTksLTIxLjkxOTkyYzQuODcxMDksNy4wNTQ2OSAxMi45NzU1OCwxMS42NzM4MiAyMi4wODc4OSwxMS42NzM4MmMxNC43ODEyNSwwIDI2Ljg3NSwtMTIuMDkzNzUgMjYuODc1LC0yNi44NzVjMCwtMTQuNzgxMjUgLTEyLjA5Mzc1LC0yNi44NzUgLTI2Ljg3NSwtMjYuODc1ek0xMzQuMzc1LDIxLjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1ek0zNy42MjUsNjQuNWM4Ljk4NjMzLDAgMTYuMTI1LDcuMTM4NjggMTYuMTI1LDE2LjEyNWMwLDguOTg2MzMgLTcuMTM4NjcsMTYuMTI1IC0xNi4xMjUsMTYuMTI1Yy04Ljk4NjMyLDAgLTE2LjEyNSwtNy4xMzg2NyAtMTYuMTI1LC0xNi4xMjVjMCwtOC45ODYzMiA3LjEzODY4LC0xNi4xMjUgMTYuMTI1LC0xNi4xMjV6TTEzNC4zNzUsMTA3LjVjOC45ODYzMywwIDE2LjEyNSw3LjEzODY4IDE2LjEyNSwxNi4xMjVjMCw4Ljk4NjMzIC03LjEzODY3LDE2LjEyNSAtMTYuMTI1LDE2LjEyNWMtOC45ODYzMiwwIC0xNi4xMjUsLTcuMTM4NjcgLTE2LjEyNSwtMTYuMTI1YzAsLTguOTg2MzIgNy4xMzg2OCwtMTYuMTI1IDE2LjEyNSwtMTYuMTI1eiI+PC9wYXRoPjwvZz48L2c+PC9nPjwvc3ZnPg=="
+              alt="Share Icon"
+            >
+            <span id="tooltiptext" class="tooltiptext">Copy Link</span>
+          </div>
+
+          <hr>
+          <div class="clearfix">
+            
+            <a class="btn btn-primary float-left" href="/write-up/2026/02/02/huskycorp.html" title="Understanding Identity Abuse in Entra ID through a Case Study (Xintra)">&larr; Previous<span class="d-none d-md-inline"> Post</span></a>
+            
+            
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+
+<hr>
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://linkedin.com/in/alexis-o">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+           </a>
+          </li>
+          
+          <li class="list-inline-item">
+            <a href="https://x.com/_heilancoos">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/heilancoos">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; HC 2026</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+    <script>
+      // Copy link helpers
+      function copyToClipboard(){ var t=document.createElement("textarea");t.value=window.location.href;document.body.appendChild(t);t.select();document.execCommand("Copy");t.remove();document.getElementById("tooltiptext").innerHTML="Link copied"; }
+      function outFunc(){ document.getElementById("tooltiptext").innerHTML="Copy Link"; }
+
+      // TOC generator
+      document.addEventListener("DOMContentLoaded", function () {
+        const toc = document.getElementById("toc-list");
+        const headers = document.querySelectorAll(".post-body h1, .post-body h2, .post-body h3, .post-body h4, .post-body h5");
+        headers.forEach((header, index) => {
+          if (!header.id) header.id = "section-" + index;
+          const link = document.createElement("a");
+          link.href = "#" + header.id;
+          link.textContent = header.textContent;
+          const item = document.createElement("li");
+          item.className = header.tagName.toLowerCase();
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      });
+    </script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const tocLinks = document.querySelectorAll(".toc a");
+    const sections = [...tocLinks].map(link => document.querySelector(link.getAttribute("href")));
+
+    function onScroll() {
+        let scrollPos = window.scrollY + 120; // offset for navbar height
+        let current;
+
+        sections.forEach((section, i) => {
+        if (section.offsetTop <= scrollPos) {
+            current = tocLinks[i];
+        }
+        });
+
+        tocLinks.forEach(link => link.classList.remove("active"));
+        if (current) {
+        current.classList.add("active");
+        }
+    }
+
+    window.addEventListener("scroll", onScroll);
+    });
+    </script>
+    
+  </body>
+</html>

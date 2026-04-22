@@ -15,6 +15,14 @@
       >.post-container{
         display: block !important;
         text-align: center;
+        >.post-img-container{
+          width: 100%;
+          >.post-img{
+            width: 100%;
+            max-width: 100%;
+            height: 200px;
+          }
+        }
         >.post-text {
           padding-top: 30px !important;
         }
@@ -24,9 +32,9 @@
       display: flex;
       > .post-img-container{
         > .post-img{
-          max-width: 90vw;
+          max-width: 100%;
           max-height: 400px;
-          width: 90vw;
+          width: 100%;
           height: 225px;
           object-fit: cover;
         }
@@ -72,6 +80,8 @@
     > a {
       > .post-container{
         > .post-img-container{
+          flex-shrink: 0;
+          width: 400px;
           > .post-img{
             max-width: 400px;
             max-height: 400px;
